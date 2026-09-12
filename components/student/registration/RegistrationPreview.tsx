@@ -318,6 +318,19 @@ export default function RegistrationPreview({
                 </span>
               )}
             </div>
+
+            {/* Affidavit */}
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
+              {formData.affidavit_url ? (
+                <span className="text-emerald-700 font-medium">
+                  ✅ Affidavit uploaded / शपथ पत्र अपलोड हो गया
+                </span>
+              ) : (
+                <span className="text-red-600 font-medium">
+                  ❌ Affidavit not uploaded / शपथ पत्र अपलोड नहीं हुआ
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

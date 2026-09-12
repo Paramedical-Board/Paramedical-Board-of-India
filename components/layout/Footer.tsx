@@ -14,12 +14,12 @@ export default function Footer() {
             <div>
               {/* Emblem & Brand Title */}
               <div className="flex items-center gap-3 mb-3">
-                <div className="relative w-11 h-11 rounded-full overflow-hidden shrink-0 border-2 border-[#E5C158]/70 bg-white/10 shadow-md">
+                <div className="relative w-12 h-12 sm:w-14 sm:h-14 shrink-0">
                   <Image
-                    src="/logo-emblem.png"
+                    src="/logo.png"
                     alt="Indian Paramedical Board of India Emblem"
                     fill
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </div>
                 <div className="flex flex-col leading-tight">

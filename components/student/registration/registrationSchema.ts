@@ -70,6 +70,7 @@ export const studentRegistrationSchema = z.object({
   aadhaar_url: z.string().min(1, "Aadhaar Card document is required"),
   marksheet_10th_url: z.string().min(1, "10th Marksheet is required"),
   marksheet_12th_url: z.string().min(1, "12th Marksheet is required"),
+  affidavit_url: z.string().min(1, "Affidavit document is required"),
 
   // Captcha & Declaration
   captchaInput: z.string().min(1, "Captcha code is required"),
@@ -106,6 +107,7 @@ export interface RegistrationPayload {
   aadhaar_url: string;
   marksheet_10th_url: string;
   marksheet_12th_url: string;
+  affidavit_url: string;
 }
 
 export const INDIAN_STATES = [
@@ -148,18 +150,25 @@ export const INDIAN_STATES = [
 ];
 
 export const PARAMEDICAL_COURSES = [
-  "Diploma in Medical Laboratory Technology (DMLT) - 2 Years",
-  "Diploma in Operation Theatre Technology (DOTT) - 2 Years",
-  "Diploma in Radiography & Imaging Technology (DRIT) - 2 Years",
-  "Diploma in Dialysis Technology (DDT) - 2 Years",
-  "Diploma in ECG Technology (DECG) - 1 Year",
-  "Diploma in Emergency Medical Services (DEMS) - 2 Years",
-  "Diploma in Physiotherapy Technology (DPT) - 2 Years",
-  "Diploma in Optometry Technology (DOT) - 2 Years",
-  "Diploma in Medical Record Technology (DMRT) - 1 Year",
-  "Certificate in Community Health (CCH) - 1 Year",
-  "Diploma in Sanitary Health Inspector (DSHI) - 1 Year",
-  "Diploma in Anesthesia Technology (DAT) - 2 Years",
+  "Certificate in Medical Laboratory Technology (CMLT)",
+  "Certificate in Operation Theatre Technology (COTT)",
+  "Certificate in Dialysis Technician (CDT)",
+  "Certificate in General Duty Assistant (CGDA)",
+  "Certificate in ECG Technician (CECG)",
+  "Certificate in Medical Radiology & Imaging Technology (CMRIT)",
+  "Certificate in Emergency Medical Technician (CEMT)",
+  "Certificate in Child Care & Education (CCCE)",
+  "Certificate in Community Medical Services & Essential Drugs (CCMS & ED)",
+  "Certificate in First Aid & CPR (First Aid & CPR)",
+  "Certificate in Blood Bank Technology (CBBT)",
+  "Certificate in Multipurpose Health Worker (CMHW)",
+  "Certificate in Dental Technician & Hygienist (CDTH)",
+  "Certificate in X-ray (Cert. X-ray)",
+  "Certificate in Ultrasonography (CU)",
+  "Certificate in Phlebotomy Technology (CPT)",
+  "Certificate in CT Scan Technician (Cert. CT Scan)",
+  "Certificate in Sanitary Inspector (CSI)",
+  "Certificate in Medical Dressing (CMD)",
 ];
 
 export const CATEGORIES = ["General", "OBC", "SC", "ST", "EWS"] as const;

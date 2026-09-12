@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import imagekit from '@/lib/imagekit';
+import { verifyToken, COOKIE_NAME } from '@/lib/auth';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/jpg'];
-
-// docType -> max file size in bytes
-const MAX_SIZES: Record<string, number> = {
-  photo: 200 * 1024,          // 200 KB
-  signature: 200 * 1024,      // 200 KB
-  aadhaar: 2 * 1024 * 1024,   // 2 MB
-  marksheet_10th: 2 * 1024 * 1024,
-  marksheet_12th: 2 * 1024 * 1024,
+const DOC_RULES: Record<string, { allowedTypes: string[]; maxSize: number; extension: string }> = {
+  photo: { allowedTypes: ['image/jpeg', 'image/jpg'], maxSize: 200 * 1024, extension: 'jpg' },
+  signature: { allowedTypes: ['image/jpeg', 'image/jpg'], maxSize: 200 * 1024, extension: 'jpg' },
+  aadhaar: { allowedTypes: ['image/jpeg', 'image/jpg'], maxSize: 2 * 1024 * 1024, extension: 'jpg' },
+  marksheet_10th: { allowedTypes: ['image/jpeg', 'image/jpg'], maxSize: 2 * 1024 * 1024, extension: 'jpg' },
+  marksheet_12th: { allowedTypes: ['image/jpeg', 'image/jpg'], maxSize: 2 * 1024 * 1024, extension: 'jpg' },
+  affidavit: { allowedTypes: ['application/pdf'], maxSize: 2 * 1024 * 1024, extension: 'pdf' },
 };
 
 export async function POST(request: NextRequest) {
   try {
+    const token = request.cookies.get(COOKIE_NAME)?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+    if (!verifyToken(token)) {
+      return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const docType = formData.get('docType') as string | null;
@@ -22,19 +29,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing file or docType' }, { status: 400 });
     }
 
-    if (!MAX_SIZES[docType]) {
+    const rule = DOC_RULES[docType];
+    if (!rule) {
       return NextResponse.json({ error: 'Invalid docType' }, { status: 400 });
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (!rule.allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Only JPG/JPEG files are allowed' },
+        { error: `Invalid file type for ${docType}` },
         { status: 400 }
       );
     }
 
-    if (file.size > MAX_SIZES[docType]) {
-      const maxKB = MAX_SIZES[docType] / 1024;
+    if (file.size > rule.maxSize) {
+      const maxKB = rule.maxSize / 1024;
       return NextResponse.json(
         { error: `File too large. Max size is ${maxKB} KB` },
         { status: 400 }
@@ -46,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     const uploadResponse = await imagekit.upload({
       file: buffer,
-      fileName: `${docType}_${Date.now()}.jpg`,
+      fileName: `${docType}_${Date.now()}.${rule.extension}`,
       folder: '/paramedical-registrations',
     });
 

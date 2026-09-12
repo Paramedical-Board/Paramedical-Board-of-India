@@ -46,6 +46,7 @@ export const registrationSchema = z.object({
   aadhaar_url: z.string().url(),
   marksheet_10th_url: z.string().url(),
   marksheet_12th_url: z.string().url(),
+  affidavit_url: z.string().url(),
 });
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;

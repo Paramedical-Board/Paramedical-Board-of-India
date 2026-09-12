@@ -19,13 +19,12 @@ export default function Navbar() {
 
   const menuItems: MenuItem[] = [
     { name: "Home", href: "/" },
-    { name: "About Us", href: "#" },
-    { name: "Courses", href: "#" },
-    { name: "Affiliated Institutions", href: "#" },
+    { name: "About Us", href: "/about-us" },
+    { name: "Courses", href: "/courses" },
+    { name: "Affiliated Institutions", href: "/affiliated-institutions" },
     {
       name: "Student Corner",
       dropdownItems: [
-        { name: "Student Registration", href: "/student/registration", badge: "New" },
         { name: "I-Card Download", isPlaceholder: true, badge: "Coming Soon" },
         { name: "Admit Card", isPlaceholder: true, badge: "Coming Soon" },
       ],
@@ -43,12 +42,12 @@ export default function Navbar() {
         {/* Left: Emblem & Prominent Bilingual Title */}
         <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 flex-1 mr-1">
           {/* Emblem Logo */}
-          <div className="relative w-8 h-8 xs:w-9 xs:h-9 sm:w-11 sm:h-11 rounded-full overflow-hidden shrink-0 border border-[#00031D]/20 shadow-xs bg-white/50">
+          <div className="relative w-9 h-9 sm:w-11 sm:h-11 shrink-0">
             <Image
-              src="/logo-emblem.png"
+              src="/logo.png"
               alt="Indian Paramedical Board of India Emblem"
               fill
-              className="object-cover"
+              className="object-contain"
               priority
             />
           </div>
@@ -64,15 +63,8 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Right: Apply Online Button & Mobile Menu Toggle */}
+        {/* Right: Mobile Menu Toggle */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          <Link
-            href="/student/registration"
-            className="bg-[#B13B1C] hover:bg-[#962f14] text-white font-bold text-[10px] xs:text-[11px] sm:text-xs md:text-[13px] uppercase px-2.5 xs:px-3 sm:px-4 md:px-5 py-1.5 sm:py-2.5 rounded-[4px] shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 tracking-wider whitespace-nowrap transition-all duration-200 cursor-pointer inline-block"
-          >
-            APPLY ONLINE
-          </Link>
-
           {/* Mobile & Tablet Hamburger Toggle */}
           <button
             type="button"

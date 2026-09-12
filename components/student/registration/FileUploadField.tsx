@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import Image from "next/image";
 
-export type DocType = "photo" | "signature" | "aadhaar" | "marksheet_10th" | "marksheet_12th";
+export type DocType = "photo" | "signature" | "aadhaar" | "marksheet_10th" | "marksheet_12th" | "affidavit";
 
 interface Props {
   label: string;
@@ -13,39 +13,53 @@ interface Props {
   onChange: (url: string) => void;
   error?: string;
   aspectRatio?: "square" | "signature" | "document";
+  queryMessage?: string;
 }
 
 export default function FileUploadField({
   label,
   hindiLabel,
-  subText = "JPG/JPEG only (Max size: 200 KB)",
+  subText,
   docType,
   maxSizeKB,
   value,
   onChange,
   error,
   aspectRatio = "document",
+  queryMessage,
 }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const defaultSubText =
+    subText || (docType === "affidavit" ? "PDF only (Max size: 2 MB)" : "JPG/JPEG only (Max size: 200 KB)");
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setUploadError(null);
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 1. Client-side Validation: type must be JPG/JPEG only
-    const validMimes = ["image/jpeg", "image/jpg"];
-    const fileExt = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-    const isValidExt = fileExt === ".jpg" || fileExt === ".jpeg";
-    const isValidMime = validMimes.includes(file.type);
+    // 1. Client-side Validation: type check
+    if (docType === "affidavit") {
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      if (!isPdf) {
+        setUploadError("Only PDF files are allowed (केवल PDF मान्य है)");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+    } else {
+      const validMimes = ["image/jpeg", "image/jpg"];
+      const fileExt = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+      const isValidExt = fileExt === ".jpg" || fileExt === ".jpeg";
+      const isValidMime = validMimes.includes(file.type);
 
-    if (!isValidMime && !isValidExt) {
-      setUploadError("Only JPG/JPEG files are allowed (केवल JPG/JPEG मान्य है)");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
+      if (!isValidMime && !isValidExt) {
+        setUploadError("Only JPG/JPEG files are allowed (केवल JPG/JPEG मान्य है)");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
     }
 
     // 2. Client-side Validation: size limit
@@ -70,6 +84,14 @@ export default function FileUploadField({
         method: "POST",
         body: formData,
       });
+
+      if (res.status === 401) {
+        setUploadError("Session expired, please log in again / सत्र समाप्त हो गया है, कृपया पुनः लॉगिन करें");
+        setTimeout(() => {
+          window.location.href = "/college/login";
+        }, 1500);
+        return;
+      }
 
       const data = await res.json();
 
@@ -110,13 +132,22 @@ export default function FileUploadField({
         <span className="text-[#B13B1C] ml-0.5">*</span>
       </label>
 
+      {queryMessage && (
+        <div className="mb-2 p-2 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 flex items-start gap-1.5 shadow-2xs">
+          <span className="text-amber-600 font-bold shrink-0">⚠️ Board Query:</span>
+          <span>{queryMessage}</span>
+        </div>
+      )}
+
       <div
-        className={`border-2 border-dashed rounded-lg p-3.5 sm:p-4 flex flex-col items-center justify-center transition-colors min-h-[140px] bg-slate-50/60 ${
+        className={`border-2 border-dashed rounded-lg p-3.5 sm:p-4 flex flex-col items-center justify-center transition-colors min-h-[140px] ${
           displayError
             ? "border-[#B13B1C] bg-red-50/30"
+            : queryMessage
+            ? "border-amber-500 bg-amber-50/20"
             : value
             ? "border-emerald-500 bg-emerald-50/20"
-            : "border-slate-300 hover:border-[#143E66]/50"
+            : "border-slate-300 hover:border-[#143E66]/50 bg-slate-50/60"
         }`}
       >
         {isUploading ? (
@@ -147,32 +178,42 @@ export default function FileUploadField({
             </span>
           </div>
         ) : value ? (
-          /* Success state with green checkmark + selected filename / image preview */
+          /* Success state with green checkmark + selected filename / preview */
           <div className="flex flex-col items-center gap-2.5 w-full">
             {/* Green Checkmark Banner */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-medium w-full max-w-xs justify-center border border-emerald-300">
               <span className="text-emerald-600 font-bold text-sm">✅</span>
-              <span className="truncate font-semibold">{fileName || `${label}.jpg`}</span>
+              <span className="truncate font-semibold">{fileName || `${label}.${docType === "affidavit" ? "pdf" : "jpg"}`}</span>
             </div>
 
-            {/* Thumbnail Preview */}
-            <div
-              className={`relative overflow-hidden rounded border border-slate-300 bg-white shadow-xs ${
-                aspectRatio === "signature"
-                  ? "w-44 h-14"
-                  : aspectRatio === "document"
-                  ? "w-32 h-24"
-                  : "w-24 h-28"
-              }`}
-            >
-              <Image
-                src={value}
-                alt={label}
-                fill
-                className="object-contain p-1"
-                unoptimized
-              />
-            </div>
+            {/* Thumbnail / Document Preview */}
+            {docType === "affidavit" ? (
+              <div className="flex flex-col items-center justify-center w-32 h-24 rounded border border-slate-300 bg-red-50/50 shadow-xs p-2 text-center">
+                <svg className="w-8 h-8 text-[#B13B1C]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
+                  <path d="M8 12h8v2H8zm0 4h5v2H8z" />
+                </svg>
+                <span className="text-[10px] font-bold text-[#B13B1C] mt-1 uppercase tracking-wider">PDF Document</span>
+              </div>
+            ) : (
+              <div
+                className={`relative overflow-hidden rounded border border-slate-300 bg-white shadow-xs ${
+                  aspectRatio === "signature"
+                    ? "w-44 h-14"
+                    : aspectRatio === "document"
+                    ? "w-32 h-24"
+                    : "w-24 h-28"
+                }`}
+              >
+                <Image
+                  src={value}
+                  alt={label}
+                  fill
+                  className="object-contain p-1"
+                  unoptimized
+                />
+              </div>
+            )}
 
             {/* Action buttons */}
             <div className="flex items-center gap-2.5 mt-0.5">
@@ -209,13 +250,13 @@ export default function FileUploadField({
             <p className="text-xs font-semibold text-slate-800 mb-0.5">
               {label}
             </p>
-            <p className="text-[11px] text-slate-500 mb-2.5">{subText}</p>
+            <p className="text-[11px] text-slate-500 mb-2.5">{defaultSubText}</p>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="px-3 py-1 bg-white border border-[#143E66] text-[#143E66] hover:bg-[#143E66] hover:text-white rounded text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
             >
-              Choose JPG File
+              {docType === "affidavit" ? "Choose PDF File" : "Choose JPG File"}
             </button>
           </div>
         )}
@@ -224,7 +265,7 @@ export default function FileUploadField({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".jpg,.jpeg,image/jpeg,image/jpg"
+          accept={docType === "affidavit" ? "application/pdf,.pdf" : ".jpg,.jpeg,image/jpeg,image/jpg"}
           className="hidden"
           onChange={handleFileSelect}
         />

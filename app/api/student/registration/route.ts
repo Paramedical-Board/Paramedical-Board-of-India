@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { registrationSchema } from '@/lib/validations/registration';
+import { verifyToken, COOKIE_NAME } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const token = request.cookies.get(COOKIE_NAME)?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+    const session = verifyToken(token);
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
+    }
+
     const body = await request.json();
     const parsed = registrationSchema.safeParse(body);
 
@@ -16,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('student_registrations')
-      .insert(parsed.data)
+      .insert({ ...parsed.data, college_id: session.college_id })
       .select()
       .single();
 

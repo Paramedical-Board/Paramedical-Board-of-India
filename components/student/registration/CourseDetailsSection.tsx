@@ -40,7 +40,7 @@ export default function CourseDetailsSection({ register, errors }: Props) {
             {...register("course")}
           >
             <option value="" disabled>
-              -- Select Desired Paramedical Diploma / Certificate Program --
+              -- Select Desired Paramedical Certificate Program --
             </option>
             {PARAMEDICAL_COURSES.map((crs) => (
               <option key={crs} value={crs}>
@@ -54,7 +54,7 @@ export default function CourseDetailsSection({ register, errors }: Props) {
             </p>
           )}
           <p className="text-[11px] text-slate-500 mt-2">
-            ℹ Note: Ensure you meet the minimum educational eligibility criteria (10+2 with PCB/PCM or equivalent) for the selected diploma program.
+            ℹ Note: Ensure you meet the minimum educational eligibility criteria (10th / 10+2 or equivalent) for the selected certificate program.
           </p>
         </div>
       </div>
