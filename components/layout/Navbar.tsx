@@ -26,7 +26,7 @@ export default function Navbar() {
       name: "Student Corner",
       dropdownItems: [
         { name: "I-Card Download", isPlaceholder: true, badge: "Coming Soon" },
-        { name: "Admit Card", isPlaceholder: true, badge: "Coming Soon" },
+        { name: "Admit Card", href: "/admit-card" },
       ],
     },
     { name: "Examinations", href: "#" },

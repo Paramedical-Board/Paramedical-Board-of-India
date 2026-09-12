@@ -1,0 +1,245 @@
+import React from "react";
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { verifyAdminToken, ADMIN_COOKIE_NAME } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase";
+import { getAdmitCardData, AdmitCardData } from "@/lib/admit-card-data";
+import AdmitCardLayout from "@/components/AdmitCardLayout";
+import PrintButton from "@/components/PrintButton";
+
+interface BulkPageProps {
+  searchParams: Promise<{ course_name?: string }>;
+}
+
+export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+  const admin = token ? verifyAdminToken(token) : null;
+
+  if (!admin) {
+    redirect("/admin/login");
+  }
+
+  const { course_name } = await searchParams;
+
+  if (!course_name) {
+    return (
+      <div className="flex-1 max-w-2xl w-full mx-auto px-4 py-16 text-center">
+        <div className="bg-white border border-amber-200 rounded-lg p-8 shadow-sm">
+          <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 mb-2">Course Name Required</h2>
+          <p className="text-sm text-slate-600 mb-6">
+            Please specify a course name in the URL query parameter (e.g., <code>?course_name=...</code>) to generate bulk admit cards.
+          </p>
+          <Link
+            href="/admin/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold rounded transition-colors"
+          >
+            ← Back to Applications
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Fetch approved registrations for this course
+  const { data: registrations, error: regError } = await supabaseAdmin
+    .from("student_registrations")
+    .select("id, registration_no, candidate_name")
+    .eq("course", course_name)
+    .eq("status", "approved")
+    .order("created_at", { ascending: true });
+
+  if (regError) {
+    return (
+      <div className="flex-1 max-w-2xl w-full mx-auto px-4 py-16 text-center">
+        <div className="bg-white border border-red-200 rounded-lg p-8 shadow-sm">
+          <h2 className="text-lg font-bold text-red-700 mb-2">Error Loading Registrations</h2>
+          <p className="text-sm text-slate-600 mb-6">{regError.message}</p>
+          <Link
+            href="/admin/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#143E66] text-white text-xs font-bold rounded transition-colors"
+          >
+            ← Back to Applications
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const admitCards: AdmitCardData[] = [];
+  const skipped: { id: string; registration_no: string; candidate_name: string; reason: string }[] = [];
+
+  if (registrations && registrations.length > 0) {
+    for (const reg of registrations) {
+      const { data, error } = await getAdmitCardData(reg.id);
+      if (error || !data) {
+        skipped.push({
+          id: reg.id,
+          registration_no: reg.registration_no,
+          candidate_name: reg.candidate_name,
+          reason: error ?? "Unknown error",
+        });
+      } else {
+        admitCards.push(data);
+      }
+    }
+  }
+
+  const hasAdmitCards = admitCards.length > 0;
+
+  return (
+    <div className="min-h-screen py-8 px-4 sm:px-6 relative bg-slate-100 print:bg-white print:p-0">
+      {/* Floating Print Button */}
+      {hasAdmitCards && (
+        <div className="fixed top-20 right-6 z-50 no-print print:hidden">
+          <PrintButton label={`Print All (${admitCards.length})`} />
+        </div>
+      )}
+
+      {/* Screen-Only Top Control & Summary Bar */}
+      <div className="max-w-[794px] mx-auto mb-6 no-print print:hidden space-y-4">
+        {/* Navigation & Header */}
+        <div className="flex items-center justify-between">
+          <Link
+            href="/admin/dashboard"
+            className="text-xs font-semibold text-[#143E66] hover:underline flex items-center gap-1"
+          >
+            ← Back to Dashboard
+          </Link>
+          <span className="text-xs text-slate-500 font-medium">
+            Course: <strong className="text-slate-800">{course_name}</strong>
+          </span>
+        </div>
+
+        {/* Generation Status Overview */}
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs">
+          <h2 className="text-sm font-bold text-[#00031D] mb-1">
+            Bulk Admit Cards Generation / सामूहिक प्रवेश पत्र
+          </h2>
+          <p className="text-xs text-slate-500">
+            Total Approved: <strong>{(registrations?.length || 0)}</strong> | Ready to Print:{" "}
+            <strong className="text-emerald-700">{admitCards.length}</strong> | Skipped:{" "}
+            <strong className="text-amber-700">{skipped.length}</strong>
+          </p>
+        </div>
+
+        {/* Skipped Students Warning Table (Screen-Only) */}
+        {skipped.length > 0 && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 shadow-xs">
+            <div className="flex items-center gap-2 mb-2">
+              <svg
+                className="w-4 h-4 text-amber-700 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                Skipped Students ({skipped.length}) — Action Required
+              </h3>
+            </div>
+            <p className="text-[11px] text-amber-800 mb-3">
+              The following students could not be included in bulk printing because their record or course schedule is incomplete (e.g. missing roll number, missing datesheet, or exam center).
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs bg-white rounded border border-amber-200">
+                <thead>
+                  <tr className="bg-amber-100/70 text-amber-900 text-[11px] uppercase border-b border-amber-200">
+                    <th className="py-2 px-3 font-bold">Reg. No</th>
+                    <th className="py-2 px-3 font-bold">Candidate Name</th>
+                    <th className="py-2 px-3 font-bold">Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-amber-100 text-[11.5px]">
+                  {skipped.map((s) => (
+                    <tr key={s.id}>
+                      <td className="py-2 px-3 font-mono font-bold text-[#143E66]">{s.registration_no}</td>
+                      <td className="py-2 px-3 font-semibold text-slate-800">{s.candidate_name}</td>
+                      <td className="py-2 px-3 text-red-600 font-medium">{s.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Empty State when no admit cards can be printed */}
+      {!hasAdmitCards && (
+        <div className="max-w-[794px] mx-auto bg-white border border-slate-200 rounded-lg p-10 text-center shadow-xs">
+          <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-base font-bold text-slate-800 mb-1">
+            No Admit Cards Ready for Printing
+          </h3>
+          <p className="text-xs text-slate-500 mb-6">
+            {registrations?.length === 0
+              ? `No approved student registrations found for course "${course_name}".`
+              : `All approved students for "${course_name}" are missing required prerequisites (roll number, exam center, or datesheet). Check the skipped list above.`}
+          </p>
+          <Link
+            href="/admin/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold rounded transition-colors"
+          >
+            ← Back to Dashboard
+          </Link>
+        </div>
+      )}
+
+      {/* Printable Cards List */}
+      {hasAdmitCards && (
+        <div className="bulk-admit-cards-container space-y-8 print:space-y-0">
+          {admitCards.map((admitCard, index) => (
+            <div
+              key={admitCard.registration_no || index}
+              className="admit-card-item-wrapper break-after-page"
+              style={{
+                pageBreakAfter: "always",
+                breakAfter: "page",
+              }}
+            >
+              <AdmitCardLayout admitCard={admitCard} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

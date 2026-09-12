@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admit Card - Indian Paramedical Board of India</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body {
+            font-family: 'Poppins', 'Noto Sans Devanagari', sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 10px;
+        }
+
+        .no-print-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .print-btn {
+            background-color: #0b2545;
+            color: #ffffff;
+            border: none;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s;
+        }
+
+        .print-btn:hover {
+            background-color: #133a6b;
+        }
+
+        /* Admit Card Sheet (A4 Dimensions) */
+        .admit-card-container {
+            width: 794px; /* A4 standard width at 96 DPI */
+            min-height: 1123px;
+            background: #ffffff;
+            padding: 28px 36px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            padding-bottom: 8px;
+        }
+
+        /* Circle Logo Placeholder */
+        .logo-placeholder {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            border: 1.5px dashed #94a3b8;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .logo-placeholder-icon {
+            width: 22px;
+            height: 22px;
+            color: #94a3b8;
+            margin-bottom: 2px;
+        }
+
+        .header-spacer {
+            width: 76px;
+            flex-shrink: 0;
+        }
+
+        .header-title-box {
+            text-align: center;
+            flex-grow: 1;
+            padding: 0 12px;
+        }
+
+        .board-title-en {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0b2545;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .board-title-hi {
+            font-family: 'Noto Sans Devanagari', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #8b0000;
+            margin-top: 2px;
+        }
+
+        .board-subtitle {
+            font-size: 10.5px;
+            color: #475569;
+            font-weight: 500;
+            margin-top: 3px;
+        }
+
+        .header-divider {
+            height: 2.5px;
+            background: #8b0000;
+            width: 100%;
+            margin-top: 6px;
+            margin-bottom: 14px;
+        }
+
+        /* Hall Ticket Title */
+        .ticket-title {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #0b2545;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        /* Candidate Details Card */
+        .section-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            background: #ffffff;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #8b0000;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .details-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .details-grid {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: 7px;
+            column-gap: 16px;
+            font-size: 11.5px;
+        }
+
+        .detail-row {
+            display: flex;
+            align-items: baseline;
+        }
+
+        .detail-row.full-width {
+            grid-column: span 2;
+        }
+
+        .detail-label {
+            color: #475569;
+            font-weight: 500;
+            min-width: 115px;
+            flex-shrink: 0;
+        }
+
+        .detail-colon {
+            margin-right: 6px;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .detail-val {
+            color: #0b2545;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        /* Candidate Photo Upload Placeholder */
+        .photo-placeholder-box {
+            width: 120px;
+            height: 138px;
+            border: 1.5px dashed #94a3b8;
+            border-radius: 6px;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 8px;
+            text-align: center;
+            flex-shrink: 0;
+            color: #64748b;
+            position: relative;
+            margin-top: -4px;
+        }
+
+        .photo-icon {
+            width: 28px;
+            height: 28px;
+            margin-bottom: 5px;
+            color: #94a3b8;
+        }
+
+        .photo-text-main {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            line-height: 1.25;
+            margin-bottom: 3px;
+        }
+
+        .photo-text-sub {
+            font-size: 8px;
+            color: #94a3b8;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        /* Exam Schedule Table */
+        .schedule-table-box {
+            margin-bottom: 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            text-align: left;
+        }
+
+        .schedule-table thead tr {
+            background-color: #0b2545;
+            color: #ffffff;
+        }
+
+        .schedule-table th {
+            padding: 8px 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            font-size: 10.5px;
+            color: #ffffff !important;
+            border-right: 1px solid #1e3a6a;
+        }
+
+        .schedule-table th:last-child {
+            border-right: none;
+        }
+
+        .schedule-table td {
+            padding: 7px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            color: #1e293b;
+        }
+
+        .schedule-table td:last-child {
+            border-right: none;
+        }
+
+        .schedule-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .schedule-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .col-sno {
+            width: 8%;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .col-subject {
+            width: 48%;
+            font-weight: 700;
+            color: #0b2545;
+        }
+
+        .col-date {
+            width: 22%;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .col-timing {
+            width: 22%;
+            text-align: center;
+        }
+
+        .schedule-table td.col-timing {
+            font-weight: 500;
+            color: #334155;
+        }
+
+        /* Instructions */
+        .instructions-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            background: #ffffff;
+        }
+
+        .instructions-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #8b0000;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .instructions-list {
+            padding-left: 16px;
+            font-size: 9.5px;
+            line-height: 1.45;
+            color: #334155;
+        }
+
+        .instructions-list li {
+            margin-bottom: 4px;
+        }
+
+        .instructions-hindi {
+            font-family: 'Noto Sans Devanagari', sans-serif;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed #cbd5e1;
+        }
+
+        /* Signatures */
+        .signatures-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 10px;
+            margin-top: 38px;
+            margin-bottom: 10px;
+        }
+
+        .sig-block {
+            text-align: center;
+            width: 210px;
+        }
+
+        .sig-space {
+            height: 45px;
+        }
+
+        .sig-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0b2545;
+            border-top: 1px solid #94a3b8;
+            padding-top: 4px;
+            display: inline-block;
+            min-width: 170px;
+        }
+
+        .sig-sub {
+            font-size: 9.5px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .seal-box {
+            width: 150px;
+            height: 60px;
+            border: 1px dashed #94a3b8;
+            border-radius: 6px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+        }
+
+        .seal-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: #475569;
+        }
+
+        .seal-sub {
+            font-size: 8.5px;
+            color: #94a3b8;
+        }
+
+        @media print {
+            body {
+                background-color: #ffffff;
+                padding: 0;
+                margin: 0;
+            }
+
+            .no-print-bar {
+                display: none !important;
+            }
+
+            .admit-card-container {
+                width: 100%;
+                min-height: auto;
+                border: none;
+                box-shadow: none;
+                padding: 20px 28px;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 8mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Printable Action Bar -->
+    <div class="no-print-bar">
+        <button class="print-btn" onclick="window.print()">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+            </svg>
+            Print / Save as PDF
+        </button>
+    </div>
+
+    <!-- Main Admit Card -->
+    <div class="admit-card-container">
+        <!-- Header -->
+        <div class="header">
+            <!-- Circular Logo -->
+            <div class="logo-placeholder" style="border: none; background: transparent;">
+                <img src="./public/logo.png" alt="Board Logo" style="width: 100%; height: 100%; object-fit: contain;" />
+            </div>
+
+            <div class="header-title-box">
+                <div class="board-title-en">INDIAN PARAMEDICAL BOARD OF INDIA</div>
+                <div class="board-title-hi">इण्डियन पैरामेडिकल बोर्ड ऑफ़ इण्डिया</div>
+                <div class="board-subtitle">An Autonomous Board Registered Under Govt. Act | Examination Division</div>
+            </div>
+
+            <!-- Spacer to keep board title perfectly centered -->
+            <div class="header-spacer"></div>
+        </div>
+
+        <div class="header-divider"></div>
+
+        <!-- Hall Ticket Title -->
+        <div class="ticket-title">
+            EXAMINATION HALL TICKET (SESSION 2023 - 2024)
+        </div>
+
+        <!-- Candidate & Examination Details -->
+        <div class="section-card">
+            <div class="section-title">CANDIDATE & EXAMINATION DETAILS</div>
+            <div class="details-wrapper">
+                <div class="details-grid">
+                    <div class="detail-row">
+                        <span class="detail-label">Candidate Name</span>
+                        <span class="detail-colon">:</span>
+                        <span class="detail-val">MOHD ASIF</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Roll Number</span>
+                        <span class="detail-colon">:</span>
+                        <span class="detail-val">SBSHE243956</span>
+                    </div>
+
+                    <div class="detail-row">
+                        <span class="detail-label">Father's Name</span>
+                        <span class="detail-colon">:</span>
+                        <span class="detail-val">MOHD VAKEEL</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Registration No.</span>
+                        <span class="detail-colon">:</span>
+                        <span class="detail-val">PM20245015769</span>
+                    </div>
+
+                    <div class="detail-row">
+                        <span class="detail-label">Session</span>
+                        <span class="detail-colon">:</span>
+                        <span class="detail-val">Mar 2023 - Apr 2024</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Exam Year</span>
+                        <span class="detail-colon">:</span>
+                        <span class="detail-val">2024 (1st Year)</span>
+                    </div>
+
+                    <div class="detail-row full-width">
+                        <span class="detail-label">Course Name</span>
+                        <span class="detail-colon">:</span>
+                        <span class="detail-val">DIPLOMA IN COMMUNITY MEDICAL SERVICE & ESSENTIAL DRUGS (CMS&ED)</span>
+                    </div>
+
+                    <div class="detail-row full-width">
+                        <span class="detail-label">Exam Centre</span>
+                        <span class="detail-colon">:</span>
+                        <span class="detail-val">SHAHEED BHAGAT SINGH HEALTH AND EDUCATION</span>
+                    </div>
+                </div>
+
+                <!-- Empty Candidate Photo Placeholder for Upload / Affix -->
+                <div class="photo-placeholder-box">
+                    <svg class="photo-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                    <div class="photo-text-main">
+                        Affix / Upload<br>Candidate Photo
+                    </div>
+                    <div class="photo-text-sub">
+                        (Passport Size)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exam Schedule Table -->
+        <div class="schedule-table-box">
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th class="col-sno">S.NO.</th>
+                        <th class="col-subject">SUBJECT NAME</th>
+                        <th class="col-date">DATE OF EXAM</th>
+                        <th class="col-timing">SHIFT / TIMING</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-sno">1</td>
+                        <td class="col-subject">COMMUNICATIVE ENGLISH</td>
+                        <td class="col-date">01-03-2024</td>
+                        <td class="col-timing">Morning</td>
+                    </tr>
+                    <tr>
+                        <td class="col-sno">2</td>
+                        <td class="col-subject">HUMAN ANATOMY & PHYSIOLOGY</td>
+                        <td class="col-date">03-03-2024</td>
+                        <td class="col-timing">Morning</td>
+                    </tr>
+                    <tr>
+                        <td class="col-sno">3</td>
+                        <td class="col-subject">PATHOLOGY & MICROBIOLOGY</td>
+                        <td class="col-date">06-03-2024</td>
+                        <td class="col-timing">Morning</td>
+                    </tr>
+                    <tr>
+                        <td class="col-sno">4</td>
+                        <td class="col-subject">HEALTH SYSTEM IN INDIA</td>
+                        <td class="col-date">07-03-2024</td>
+                        <td class="col-timing">Morning</td>
+                    </tr>
+                    <tr>
+                        <td class="col-sno">5</td>
+                        <td class="col-subject">PRIMARY HEALTH CARE</td>
+                        <td class="col-date">09-03-2024</td>
+                        <td class="col-timing">Morning</td>
+                    </tr>
+                    <tr>
+                        <td class="col-sno">6</td>
+                        <td class="col-subject">COMMUNITY HEALTH</td>
+                        <td class="col-date">14-03-2024</td>
+                        <td class="col-timing">Morning</td>
+                    </tr>
+                    <tr>
+                        <td class="col-sno">7</td>
+                        <td class="col-subject">PRACTICAL-I</td>
+                        <td class="col-date">16-03-2024</td>
+                        <td class="col-timing">Morning</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Instructions Card -->
+        <div class="instructions-card">
+            <div class="instructions-title">IMPORTANT INSTRUCTIONS FOR CANDIDATE / महत्वपूर्ण निर्देश</div>
+            
+            <ol class="instructions-list">
+                <li>Only BLACK or BLUE ballpoint pens are permitted in the exam hall. Mobile phones, iPads, calculators, or electronic devices are strictly prohibited.</li>
+                <li>Admission to the examination is purely provisional. Candidature may be cancelled in case of any misconduct or incorrect information.</li>
+                <li>Candidates must bring a printed copy of this Admit Card along with a valid Govt. Photo Identity Proof (Aadhaar Card, PAN Card, Voter ID, Driving License).</li>
+                <li>No candidate will be admitted after 15 minutes from the start of the examination.</li>
+            </ol>
+
+            <ol class="instructions-list instructions-hindi">
+                <li>परीक्षा हॉल में केवल काले या नीले बॉल पेन की अनुमति है। मोबाइल फोन, आईपैड, कैलकुलेटर या अन्य इलेक्ट्रॉनिक उपकरण लाना सख्त मना है।</li>
+                <li>परीक्षा में प्रवेश पूर्णतः अनंतिम (provisional) है। किसी भी प्रकार के दुर्व्यवहार या गलत जानकारी पाए जाने पर अभ्यर्थिता रद्द की जा सकती है।</li>
+                <li>प्रवेश पत्र के साथ अभ्यर्थी को अपना वैध सरकारी फोटो पहचान पत्र (आधार कार्ड, पैन कार्ड, वोटर आईडी, ड्राइविंग लाइसेंस आदि) लाना अनिवार्य है।</li>
+                <li>परीक्षा शुरू होने के 15 मिनट बाद किसी भी अभ्यर्थी को प्रवेश की अनुमति नहीं दी जाएगी।</li>
+            </ol>
+        </div>
+
+        <!-- Signatures & Seal -->
+        <div class="signatures-container">
+            <div class="sig-block">
+                <div class="sig-space"></div>
+                <div class="sig-title">Signature of Student</div>
+                <div class="sig-sub">(Sign in presence of Invigilator)</div>
+            </div>
+
+            <div class="sig-block">
+                <div class="seal-box">
+                    <div class="seal-title">CENTRE SEAL</div>
+                    <div class="seal-sub">Stamp & Signature</div>
+                </div>
+            </div>
+
+            <div class="sig-block">
+                <div class="sig-space"></div>
+                <div class="sig-title">Controller of Examination</div>
+                <div class="sig-sub">Indian Paramedical Board</div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

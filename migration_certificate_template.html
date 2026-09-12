@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migration Certificate - IPMBI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 10px;
+        }
+
+        /* Printable Action Bar */
+        .no-print-bar {
+            margin-bottom: 18px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .print-btn {
+            background-color: #0f2b48;
+            color: #ffffff;
+            border: none;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .print-btn:hover {
+            background-color: #1a365d;
+            transform: translateY(-1px);
+        }
+
+        /* Pure A4 Sheet Layout (210mm x 297mm) */
+        .certificate-container {
+            width: 210mm;
+            min-height: 297mm;
+            background: #ffffff;
+            border: 12px solid #1a365d;
+            outline: 3px double #d69e2e;
+            outline-offset: -8px;
+            padding: 16mm 18mm 16mm 18mm;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar Serial Number (Top Left) */
+        .top-bar {
+            position: absolute;
+            top: 14mm;
+            left: 16mm;
+            font-size: 13.5px;
+            font-weight: bold;
+            color: #1e293b;
+            z-index: 10;
+        }
+
+        /* Candidate Photo Box (Top Right with ample gap from board title) */
+        .photo-placeholder {
+            position: absolute;
+            top: 14mm;
+            right: 16mm;
+            width: 92px;
+            height: 118px;
+            border: 1.5px dashed #94a3b8;
+            background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4px;
+            color: #64748b;
+            font-size: 9px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            line-height: 1.3;
+            z-index: 10;
+        }
+
+        /* Header Section - Centered with safe margins */
+        .header {
+            text-align: center;
+            margin: 0 auto;
+            max-width: 430px; /* Ample gap away from candidate photo on the right */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .logo-box {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 8px;
+        }
+
+        .logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .header h1 {
+            color: #1a365d;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+            line-height: 1.25;
+            text-align: center;
+        }
+
+        .header h2 {
+            color: #c53030;
+            font-size: 14.5px;
+            font-family: 'Noto Sans Devanagari', 'Georgia', serif;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+
+        .header p {
+            color: #4a5568;
+            font-size: 11px;
+            font-weight: 500;
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        /* Banner - Centered Layer */
+        .banner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 24px 0 20px 0;
+            width: 100%;
+        }
+
+        .banner {
+            background-color: #0f2b48;
+            color: #ffffff;
+            padding: 8px 38px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+        }
+
+        /* Certificate Body Content */
+        .content {
+            margin-top: 15px;
+            font-size: 15.5px;
+            line-height: 2.3;
+            color: #2d3748;
+            text-align: justify;
+        }
+
+        .fill-data {
+            font-weight: bold;
+            color: #0f2b48;
+            border-bottom: 1px dotted #4a5568;
+            padding: 0 4px;
+            display: inline;
+        }
+
+        .issue-date-row {
+            margin-top: 28px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        /* Signatures Section - Balanced spacing (no excessive white gap) */
+        .signatures-section {
+            margin-top: 50px;
+        }
+
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            text-align: center;
+        }
+
+        .sig-box {
+            width: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sig-space {
+            height: 48px; /* Room for seal & sign without huge empty void */
+            width: 100%;
+        }
+
+        .sig-line {
+            border-top: 1.5px solid #4a5568;
+            padding-top: 6px;
+            font-size: 12.5px;
+            font-weight: bold;
+            color: #2d3748;
+            width: 100%;
+        }
+
+        /* Footer Notes */
+        .footer-note {
+            margin-top: 32px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            font-size: 10px;
+            color: #4a5568;
+            font-style: italic;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .footer-note p {
+            margin-bottom: 3px;
+        }
+
+        /* Print Specific Styling */
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .no-print-bar {
+                display: none !important;
+            }
+
+            .certificate-container {
+                width: 210mm;
+                min-height: 297mm;
+                box-shadow: none;
+                border: 12px solid #1a365d !important;
+                outline: 3px double #d69e2e !important;
+                outline-offset: -8px !important;
+                padding: 16mm 18mm 16mm 18mm;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Printable Action Bar -->
+    <div class="no-print-bar">
+        <button class="print-btn" onclick="window.print()">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+            </svg>
+            Print / Save as PDF
+        </button>
+    </div>
+
+    <!-- Main A4 Migration Certificate Container -->
+    <div class="certificate-container">
+        
+        <!-- Candidate Photo Box Placeholder (Top Right) -->
+        <div class="photo-placeholder">
+            PASTE CANDIDATE<br>PHOTO HERE
+        </div>
+
+        <!-- Top Serial Number (Top Left) -->
+        <div class="top-bar">
+            Sr. No : <span class="fill-data">20256097</span>
+        </div>
+
+        <!-- Header Section -->
+        <div class="header">
+            <!-- Logo Image -->
+            <div class="logo-box">
+                <img src="public/logo.png" alt="IPMBI Logo" onerror="this.onerror=null;this.src='/logo.png';" />
+            </div>
+
+            <h1>INDIAN PARAMEDICAL BOARD OF INDIA</h1>
+            <h2>इण्डियन पैरामेडिकल बोर्ड ऑफ इण्डिया</h2>
+            <p>An Autonomous Board Registered Under Govt. Act | Examination Division</p>
+        </div>
+
+        <!-- Title Banner -->
+        <div class="banner-container">
+            <div class="banner">MIGRATION CERTIFICATE</div>
+        </div>
+
+        <!-- Certificate Body Text -->
+        <div class="content">
+            This is to certify that <strong>Mr. / Ms.</strong> <span class="fill-data">MOHD ASIF</span> 
+            Son / Daughter of <span class="fill-data">MOHD VAKEEL</span> 
+            has passed <span class="fill-data">DIPLOMA IN COMMUNITY MEDICAL SERVICE & ESSENTIAL DRUGS (CMS&ED)</span> 
+            in the discipline of <span class="fill-data">PARAMEDICAL</span> 
+            in the examination held in <span class="fill-data">10 Apr 2025</span> 
+            under Reg No. <span class="fill-data">PM20245015769</span> 
+            as a student of <span class="fill-data">SHAHEED BHAGAT SINGH HEALTH AND EDUCATION</span>.<br>
+            The board/institution has no objection whatsoever, to his / her migration / admission to pursue further studies.
+        </div>
+
+        <!-- Date of Issue -->
+        <div class="issue-date-row">
+            Date of Issue : <span class="fill-data">10 May 2025</span>
+        </div>
+
+        <!-- Signatures Section -->
+        <div class="signatures-section">
+            <div class="signatures">
+                <div class="sig-box">
+                    <div class="sig-space"></div>
+                    <div class="sig-line">Checked By</div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-space"></div>
+                    <div class="sig-line">Centre Seal & Signature</div>
+                </div>
+                <div class="sig-box">
+                    <div class="sig-space"></div>
+                    <div class="sig-line">Controller Of Examinations</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Notes -->
+        <div class="footer-note">
+            <p><strong>Note:</strong></p>
+            <p>1. This document is issued through the login of the student and needs to be printed on Exclusive bond paper with color printer.</p>
+            <p>2. This document can be verified online using official board verification portal.</p>
+        </div>
+
+    </div>
+
+</body>
+</html>
