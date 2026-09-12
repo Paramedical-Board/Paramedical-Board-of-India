@@ -1,5 +1,4 @@
 import React from "react";
-import Image from "next/image";
 import { AdmitCardData } from "@/lib/admit-card-data";
 
 function formatDisplayDate(dateStr?: string | null): string {
@@ -244,7 +243,7 @@ export default function AdmitCardLayout({
                     {formatDisplayDate(subj.exam_date)}
                   </td>
                   <td className="py-1.5 px-3 text-center text-slate-700 font-medium">
-                    {subj.exam_time || "Morning (10:00 AM)"}
+                    {subj.exam_time || "—"}
                   </td>
                 </tr>
               ))

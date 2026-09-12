@@ -78,7 +78,7 @@ export default function PublicAdmitCardLookupPage() {
       </div>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 print:p-0 print:m-0 print:bg-white">
+      <main className="flex-1 flex flex-col justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 print:p-0 print:m-0 print:bg-white print:justify-start print:pt-0">
         {admitCard ? (
           /* Success View: Admit Card Rendered */
           <div className="w-full max-w-[794px] mx-auto relative">
