@@ -16,18 +16,21 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { subject_name, subject_code } = body;
+  const { subject_name, subject_code, theory_max, practical_max, ca_max } = body;
 
-  if (!subject_name && !subject_code) {
+  const updates: Record<string, string | number | null> = {};
+  if (subject_name) updates.subject_name = subject_name;
+  if (subject_code) updates.subject_code = subject_code;
+  if (theory_max !== undefined) updates.theory_max = theory_max;
+  if (practical_max !== undefined) updates.practical_max = practical_max;
+  if (ca_max !== undefined) updates.ca_max = ca_max;
+
+  if (Object.keys(updates).length === 0) {
     return NextResponse.json(
-      { error: "Provide at least subject_name or subject_code to update" },
+      { error: "Provide at least one field to update" },
       { status: 400 }
     );
   }
-
-  const updates: Record<string, string> = {};
-  if (subject_name) updates.subject_name = subject_name;
-  if (subject_code) updates.subject_code = subject_code;
 
   const { data, error } = await supabaseAdmin
     .from("course_subjects")

@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { course_name, subject_name, subject_code } = body;
+  const { course_name, subject_name, subject_code, theory_max, practical_max, ca_max } = body;
 
   if (!course_name || !subject_name || !subject_code) {
     return NextResponse.json(
@@ -49,7 +49,14 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from("course_subjects")
-    .insert({ course_name, subject_name, subject_code })
+    .insert({
+      course_name,
+      subject_name,
+      subject_code,
+      theory_max: theory_max ?? null,
+      practical_max: practical_max ?? null,
+      ca_max: ca_max ?? null,
+    })
     .select()
     .single();
 

@@ -27,11 +27,12 @@ export default function Navbar() {
       dropdownItems: [
         { name: "I-Card Download", isPlaceholder: true, badge: "Coming Soon" },
         { name: "Admit Card", href: "/admit-card" },
+        { name: "Result / परिणाम", href: "/result" },
       ],
     },
     { name: "Examinations", href: "#" },
     { name: "Announcements", href: "#" },
-    { name: "Results", href: "#" },
+    { name: "Results", href: "/result" },
     { name: "Contact Us", href: "#" },
   ];
 

@@ -1,5 +1,6 @@
 import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/home/Hero";
+import AccreditationsBar from "@/components/home/AccreditationsBar";
 import StatsBar from "@/components/home/StatsBar";
 import CoreFunctions from "@/components/home/CoreFunctions";
 import Specializations from "@/components/home/Specializations";
@@ -12,6 +13,7 @@ export default function Home() {
     <main className="min-h-screen bg-white">
       <Navbar />
       <Hero />
+      <AccreditationsBar />
       <StatsBar />
       <CoreFunctions />
       <Specializations />

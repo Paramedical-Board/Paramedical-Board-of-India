@@ -32,7 +32,7 @@ export interface AdmitCardResult {
 export async function getAdmitCardData(registrationId: string): Promise<AdmitCardResult> {
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
-    .select("registration_no, roll_no, candidate_name, father_name, dob, course, photo_url, status")
+    .select("registration_no, roll_no, candidate_name, father_name, dob, course, photo_url, status, admit_card_generated_at")
     .eq("id", registrationId)
     .single();
 
@@ -55,7 +55,7 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
     .single();
 
   if (configError || !config) {
-    return { data: null, error: "Exam session/year/center has not been configured for this course" };
+    return { data: null, error: "Exam session/year/center has not been configured for this course"};
   }
 
   const center = config.exam_centers as unknown as {
@@ -114,6 +114,19 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
       exam_time: d.exam_time,
     };
   });
+
+  // Mark admit card as generated, first time only — never overwrite an existing timestamp.
+  if (!reg.admit_card_generated_at) {
+    const { error: markError } = await supabaseAdmin
+      .from("student_registrations")
+      .update({ admit_card_generated_at: new Date().toISOString() })
+      .eq("id", registrationId)
+      .is("admit_card_generated_at", null);
+
+    if (markError) {
+      console.error("Failed to set admit_card_generated_at:", markError.message);
+    }
+  }
 
   return {
     data: {

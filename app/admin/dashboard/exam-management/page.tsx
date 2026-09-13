@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PARAMEDICAL_COURSES } from "@/components/student/registration/registrationSchema";
 
 interface SubjectItem {
@@ -9,6 +10,9 @@ interface SubjectItem {
   course_name: string;
   subject_name: string;
   subject_code: string;
+  theory_max?: number | null;
+  practical_max?: number | null;
+  ca_max?: number | null;
   created_at?: string;
 }
 
@@ -36,9 +40,17 @@ interface ExamConfig {
   exam_centers?: ExamCenter;
 }
 
+interface ResultStudentItem {
+  id: string;
+  registration_no: string;
+  candidate_name: string;
+  roll_no: string;
+}
+
 export default function ExamManagementHubPage() {
+  const router = useRouter();
   const [selectedCourse, setSelectedCourse] = useState<string>(PARAMEDICAL_COURSES[0]);
-  const [activeTab, setActiveTab] = useState<"subjects" | "datesheet" | "config" | "roll_admit">("subjects");
+  const [activeTab, setActiveTab] = useState<"subjects" | "datesheet" | "config" | "roll_admit" | "results">("subjects");
 
   // Centers list (shared for Config dropdown)
   const [centers, setCenters] = useState<ExamCenter[]>([]);
@@ -50,11 +62,17 @@ export default function ExamManagementHubPage() {
   const [subjectError, setSubjectError] = useState<string | null>(null);
   const [newSubjName, setNewSubjName] = useState("");
   const [newSubjCode, setNewSubjCode] = useState("");
+  const [newTheoryMax, setNewTheoryMax] = useState("");
+  const [newPracticalMax, setNewPracticalMax] = useState("");
+  const [newCaMax, setNewCaMax] = useState("");
   const [addingSubject, setAddingSubject] = useState(false);
   const [addSubjectSuccess, setAddSubjectSuccess] = useState<string | null>(null);
   const [editingSubject, setEditingSubject] = useState<SubjectItem | null>(null);
   const [editSubjName, setEditSubjName] = useState("");
   const [editSubjCode, setEditSubjCode] = useState("");
+  const [editTheoryMax, setEditTheoryMax] = useState("");
+  const [editPracticalMax, setEditPracticalMax] = useState("");
+  const [editCaMax, setEditCaMax] = useState("");
   const [savingEditSubject, setSavingEditSubject] = useState(false);
 
   // Tab B: Datesheet State
@@ -82,6 +100,12 @@ export default function ExamManagementHubPage() {
   const [allottingRolls, setAllottingRolls] = useState(false);
   const [allotResultMsg, setAllotResultMsg] = useState<string | null>(null);
   const [allotError, setAllotError] = useState<string | null>(null);
+
+  // Tab E: Results State
+  const [resultStudents, setResultStudents] = useState<ResultStudentItem[]>([]);
+  const [resultsReleased, setResultsReleased] = useState<boolean>(false);
+  const [loadingResults, setLoadingResults] = useState(false);
+  const [resultsError, setResultsError] = useState<string | null>(null);
 
   // Fetch all centers once
   const fetchCenters = async () => {
@@ -182,6 +206,27 @@ export default function ExamManagementHubPage() {
     }
   };
 
+  // Fetch Tab E: Results
+  const fetchResults = async (course: string) => {
+    try {
+      setLoadingResults(true);
+      setResultsError(null);
+      const res = await fetch(`/api/admin/results?course_name=${encodeURIComponent(course)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setResultsError(data.error || "Failed to load eligible students for result entry");
+        return;
+      }
+      setResultStudents(data.students || []);
+      setResultsReleased(data.released ?? false);
+    } catch (err) {
+      console.error("Fetch results error:", err);
+      setResultsError("Network error loading eligible students.");
+    } finally {
+      setLoadingResults(false);
+    }
+  };
+
   // Load everything on course change
   useEffect(() => {
     fetchCenters();
@@ -192,6 +237,7 @@ export default function ExamManagementHubPage() {
       fetchSubjects(selectedCourse);
       fetchDatesheet(selectedCourse);
       fetchConfig(selectedCourse);
+      fetchResults(selectedCourse);
       setAllotResultMsg(null);
       setAllotError(null);
     }
@@ -208,15 +254,26 @@ export default function ExamManagementHubPage() {
     setSubjectError(null);
     setAddSubjectSuccess(null);
 
+    const body: Record<string, string | number> = {
+      course_name: selectedCourse,
+      subject_name: name,
+      subject_code: code,
+    };
+    if (newTheoryMax.trim() !== "") {
+      body.theory_max = Number(newTheoryMax.trim());
+    }
+    if (newPracticalMax.trim() !== "") {
+      body.practical_max = Number(newPracticalMax.trim());
+    }
+    if (newCaMax.trim() !== "") {
+      body.ca_max = Number(newCaMax.trim());
+    }
+
     try {
       const res = await fetch("/api/admin/subjects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          course_name: selectedCourse,
-          subject_name: name,
-          subject_code: code,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -226,6 +283,9 @@ export default function ExamManagementHubPage() {
       setAddSubjectSuccess(`Subject "${name}" added successfully.`);
       setNewSubjName("");
       setNewSubjCode("");
+      setNewTheoryMax("");
+      setNewPracticalMax("");
+      setNewCaMax("");
       fetchSubjects(selectedCourse);
       fetchDatesheet(selectedCourse);
     } catch (err) {
@@ -245,14 +305,19 @@ export default function ExamManagementHubPage() {
     if (!name && !code) return;
 
     setSavingEditSubject(true);
+    const body: Record<string, string | number | null> = {
+      subject_name: name,
+      subject_code: code,
+      theory_max: editTheoryMax.trim() !== "" ? Number(editTheoryMax.trim()) : null,
+      practical_max: editPracticalMax.trim() !== "" ? Number(editPracticalMax.trim()) : null,
+      ca_max: editCaMax.trim() !== "" ? Number(editCaMax.trim()) : null,
+    };
+
     try {
       const res = await fetch(`/api/admin/subjects/${editingSubject.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject_name: name,
-          subject_code: code,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -475,6 +540,15 @@ export default function ExamManagementHubPage() {
             >
               {config ? "Config Set ✓" : "Config Missing"}
             </span>
+            <span
+              className={`px-2.5 py-1 rounded text-[11px] font-bold border ${
+                resultsReleased
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : "bg-amber-50 text-amber-800 border-amber-200"
+              }`}
+            >
+              {resultsReleased ? "Result Alloted ✓" : "Result Pending"}
+            </span>
           </div>
         </div>
       </div>
@@ -531,6 +605,26 @@ export default function ExamManagementHubPage() {
           <span className="text-[#D4AF37]">★</span>
           <span>4. Roll Numbers &amp; Admit Cards</span>
         </button>
+
+        <button
+          onClick={() => {
+            setActiveTab("results");
+            fetchResults(selectedCourse);
+          }}
+          className={`px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "results"
+              ? "border-[#143E66] text-[#143E66] bg-white rounded-t-md"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <span className="text-[#D4AF37]">★</span>
+          <span>5. Results ({resultStudents.length})</span>
+          {resultsReleased ? (
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+          )}
+        </button>
       </div>
 
       {/* ========================================================================= */}
@@ -579,32 +673,78 @@ export default function ExamManagementHubPage() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 uppercase text-[11px]">
-                      <th className="py-3 px-4 w-12 text-center">#</th>
+                      <th className="py-3 px-3 w-10 text-center">#</th>
                       <th className="py-3 px-4">Subject Name</th>
-                      <th className="py-3 px-4">Subject Code</th>
+                      <th className="py-3 px-3 w-28 whitespace-nowrap">Subject Code</th>
+                      <th className="py-3 px-2.5 text-center whitespace-nowrap">Theory Max</th>
+                      <th className="py-3 px-2.5 text-center whitespace-nowrap">Practical Max</th>
+                      <th className="py-3 px-2.5 text-center whitespace-nowrap">CA Max</th>
+                      <th className="py-3 px-2.5 text-center whitespace-nowrap">Total Max</th>
                       <th className="py-3 px-4 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 text-slate-800">
-                    {subjects.map((s, idx) => (
-                      <tr key={s.id} className="hover:bg-amber-50/40 transition-colors">
-                        <td className="py-3 px-4 text-center font-bold text-slate-500">{idx + 1}</td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{s.subject_name}</td>
-                        <td className="py-3 px-4 font-mono font-bold text-[#143E66]">{s.subject_code}</td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => {
-                              setEditingSubject(s);
-                              setEditSubjName(s.subject_name);
-                              setEditSubjCode(s.subject_code);
-                            }}
-                            className="px-2.5 py-1 bg-slate-100 hover:bg-[#143E66] hover:text-white text-[#143E66] font-bold rounded border border-slate-300 transition-colors cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {subjects.map((s, idx) => {
+                      const hasAllMax =
+                        s.theory_max !== null &&
+                        s.theory_max !== undefined &&
+                        s.practical_max !== null &&
+                        s.practical_max !== undefined &&
+                        s.ca_max !== null &&
+                        s.ca_max !== undefined;
+                      const totalMax = hasAllMax ? (s.theory_max! + s.practical_max! + s.ca_max!) : null;
+
+                      return (
+                        <tr key={s.id} className="hover:bg-amber-50/40 transition-colors">
+                          <td className="py-3 px-3 text-center font-bold text-slate-500">{idx + 1}</td>
+                          <td className="py-3 px-4 font-bold text-slate-900">{s.subject_name}</td>
+                          <td className="py-3 px-3 font-mono font-bold text-[#143E66]">{s.subject_code}</td>
+                          <td className="py-3 px-2.5 text-center font-mono font-semibold text-slate-700">
+                            {s.theory_max !== null && s.theory_max !== undefined ? (
+                              s.theory_max
+                            ) : (
+                              <span className="text-amber-600 font-bold" title="Theory Max Missing">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-2.5 text-center font-mono font-semibold text-slate-700">
+                            {s.practical_max !== null && s.practical_max !== undefined ? (
+                              s.practical_max
+                            ) : (
+                              <span className="text-amber-600 font-bold" title="Practical Max Missing">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-2.5 text-center font-mono font-semibold text-slate-700">
+                            {s.ca_max !== null && s.ca_max !== undefined ? (
+                              s.ca_max
+                            ) : (
+                              <span className="text-amber-600 font-bold" title="CA Max Missing">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-2.5 text-center font-mono font-bold text-[#0b2545]">
+                            {totalMax !== null ? (
+                              totalMax
+                            ) : (
+                              <span className="text-amber-600 font-bold" title="Max Marks Incomplete">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => {
+                                setEditingSubject(s);
+                                setEditSubjName(s.subject_name);
+                                setEditSubjCode(s.subject_code);
+                                setEditTheoryMax(s.theory_max !== null && s.theory_max !== undefined ? String(s.theory_max) : "");
+                                setEditPracticalMax(s.practical_max !== null && s.practical_max !== undefined ? String(s.practical_max) : "");
+                                setEditCaMax(s.ca_max !== null && s.ca_max !== undefined ? String(s.ca_max) : "");
+                              }}
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-[#143E66] hover:text-white text-[#143E66] font-bold rounded border border-slate-300 transition-colors cursor-pointer"
+                            >
+                              Edit
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -660,6 +800,53 @@ export default function ExamManagementHubPage() {
                   placeholder="e.g. HAP-101 or MLT01"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden uppercase"
                 />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wider mb-1 min-h-[30px] flex flex-col justify-between">
+                    <span>Theory Max</span>
+                    <span className="text-[9px] text-slate-500 font-normal">सैद्धांतिक</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newTheoryMax}
+                    onChange={(e) => setNewTheoryMax(e.target.value)}
+                    placeholder="e.g. 60"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wider mb-1 min-h-[30px] flex flex-col justify-between">
+                    <span>Practical Max</span>
+                    <span className="text-[9px] text-slate-500 font-normal">प्रायोगिक</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newPracticalMax}
+                    onChange={(e) => setNewPracticalMax(e.target.value)}
+                    placeholder="e.g. 20"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wider mb-1 min-h-[30px] flex flex-col justify-between">
+                    <span>CA Max</span>
+                    <span className="text-[9px] text-slate-500 font-normal">आंतरिक</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newCaMax}
+                    onChange={(e) => setNewCaMax(e.target.value)}
+                    placeholder="e.g. 20"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
+                  />
+                </div>
               </div>
 
               <button
@@ -719,6 +906,53 @@ export default function ExamManagementHubPage() {
                       onChange={(e) => setEditSubjCode(e.target.value.toUpperCase())}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] uppercase"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wider mb-1 min-h-[30px] flex flex-col justify-between">
+                        <span>Theory Max</span>
+                        <span className="text-[9px] text-slate-500 font-normal">सैद्धांतिक</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editTheoryMax}
+                        onChange={(e) => setEditTheoryMax(e.target.value)}
+                        placeholder="e.g. 60"
+                        className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wider mb-1 min-h-[30px] flex flex-col justify-between">
+                        <span>Practical Max</span>
+                        <span className="text-[9px] text-slate-500 font-normal">प्रायोगिक</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editPracticalMax}
+                        onChange={(e) => setEditPracticalMax(e.target.value)}
+                        placeholder="e.g. 20"
+                        className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-slate-700 uppercase tracking-wider mb-1 min-h-[30px] flex flex-col justify-between">
+                        <span>CA Max</span>
+                        <span className="text-[9px] text-slate-500 font-normal">आंतरिक</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editCaMax}
+                        onChange={(e) => setEditCaMax(e.target.value)}
+                        placeholder="e.g. 20"
+                        className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
@@ -1085,6 +1319,102 @@ export default function ExamManagementHubPage() {
               </Link>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB E: RESULTS                                                            */}
+      {/* ========================================================================= */}
+      {activeTab === "results" && (
+        <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
+          <div className="bg-[#143E66] px-5 py-3.5 text-white border-b-2 border-[#D4AF37] flex items-center justify-between">
+            <div>
+              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                Student Results &amp; Marksheet Management / परिणाम प्रबंधन ({resultStudents.length})
+              </h2>
+              <p className="text-[11px] text-slate-300 font-normal mt-0.5">
+                Select an eligible student below to enter subject marks and generate official marksheets.
+              </p>
+            </div>
+            <button
+              onClick={() => fetchResults(selectedCourse)}
+              disabled={loadingResults}
+              className="text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1 shrink-0 cursor-pointer"
+            >
+              <svg className={`w-3.5 h-3.5 ${loadingResults ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+
+          {loadingResults ? (
+            <div className="p-12 text-center text-slate-500">
+              <svg className="w-8 h-8 animate-spin mx-auto text-[#143E66] mb-2" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-xs font-semibold">Loading eligible students...</p>
+            </div>
+          ) : resultsError ? (
+            <div className="p-8 text-center text-red-600">
+              <p className="text-sm font-bold">{resultsError}</p>
+            </div>
+          ) : resultStudents.length === 0 ? (
+            <div className="p-10 text-center text-slate-500">
+              <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 mx-auto flex items-center justify-center mb-3 border border-amber-200">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-slate-800">
+                No students eligible for result entry yet (admit card must be generated first).
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Admit cards must be generated for candidates in <strong>Tab 4 (Roll Numbers &amp; Admit Cards)</strong> before marks can be entered.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 uppercase text-[11px]">
+                    <th className="py-3 px-4 w-12 text-center">#</th>
+                    <th className="py-3 px-4">Roll Number</th>
+                    <th className="py-3 px-4">Registration No.</th>
+                    <th className="py-3 px-4">Candidate Name</th>
+                    <th className="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-slate-800">
+                  {resultStudents.map((s, idx) => (
+                    <tr
+                      key={s.id}
+                      onClick={() => router.push(`/admin/dashboard/exam-management/results/${s.id}`)}
+                      className="hover:bg-amber-50/50 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-3 px-4 text-center font-bold text-slate-500">{idx + 1}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-[#143E66]">{s.roll_no || "—"}</td>
+                      <td className="py-3 px-4 font-mono text-slate-700">{s.registration_no}</td>
+                      <td className="py-3 px-4 font-bold text-slate-900 group-hover:text-[#143E66]">
+                        {s.candidate_name}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Link
+                          href={`/admin/dashboard/exam-management/results/${s.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded shadow-xs text-xs transition-colors"
+                        >
+                          <span>Enter / View Marks</span>
+                          <span>→</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
