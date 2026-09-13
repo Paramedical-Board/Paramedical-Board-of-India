@@ -6,7 +6,7 @@ interface SendEmailParams {
   htmlContent: string;
 }
 
-async function sendBrevoEmail({ to, subject, htmlContent }: SendEmailParams): Promise<void> {
+export async function sendBrevoEmail({ to, subject, htmlContent }: SendEmailParams): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.BREVO_SENDER_EMAIL;
   const senderName = process.env.BREVO_SENDER_NAME;

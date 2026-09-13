@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AdminLoginPage() {
@@ -322,6 +323,14 @@ export default function AdminLoginPage() {
                       placeholder="••••••••••••"
                       className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#143E66] focus:border-transparent transition-all"
                     />
+                  </div>
+                  <div className="mt-1.5 flex justify-end">
+                    <Link
+                      href="/admin/forgot-password"
+                      className="text-xs text-[#143E66] hover:text-[#0d2a45] hover:underline font-medium transition-colors"
+                    >
+                      Forgot password? / पासवर्ड भूल गए?
+                    </Link>
                   </div>
                 </div>
 
