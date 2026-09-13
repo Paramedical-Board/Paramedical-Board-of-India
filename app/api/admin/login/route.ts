@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/supabase';
-import { signAdminToken, ADMIN_COOKIE_NAME } from '@/lib/auth';
+import { requestOtp } from '@/lib/otp';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     const { data: admin, error } = await supabaseAdmin
       .from('admins')
-      .select('id, username, password_hash, is_active')
+      .select('id, username, password_hash, is_active, email')
       .eq('username', username)
       .single();
 
@@ -26,22 +26,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = signAdminToken({ admin_id: admin.id, username: admin.username });
+    if (!admin.email) {
+      return NextResponse.json(
+        { error: 'No email configured for this admin account, contact system owner' },
+        { status: 500 }
+      );
+    }
 
-    const response = NextResponse.json({
+    const otpResult = await requestOtp(admin.email, 'admin_login');
+    if (!otpResult.success) {
+      return NextResponse.json({ error: otpResult.error }, { status: 429 });
+    }
+
+    return NextResponse.json({
       success: true,
-      admin: { id: admin.id, username: admin.username },
+      otpRequired: true,
+      message: 'OTP sent to registered email',
     });
-
-    response.cookies.set(ADMIN_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24,
-      path: '/',
-    });
-
-    return response;
   } catch (error) {
     console.error('Admin login error:', error);
     return NextResponse.json({ error: 'Login failed' }, { status: 500 });

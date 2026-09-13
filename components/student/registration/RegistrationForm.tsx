@@ -30,6 +30,7 @@ interface RegistrationFormProps {
   isEditMode?: boolean;
   registrationId?: string;
   queries?: RegistrationQuery[];
+  verifiedEmail?: string;
 }
 
 export default function RegistrationForm({
@@ -37,6 +38,7 @@ export default function RegistrationForm({
   isEditMode = false,
   registrationId,
   queries = [],
+  verifiedEmail,
 }: RegistrationFormProps = {}) {
   const [view, setView] = useState<"form" | "preview" | "success">("form");
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false);
@@ -75,6 +77,7 @@ export default function RegistrationForm({
   } = useForm<StudentRegistrationFormData>({
     resolver: zodResolver(studentRegistrationSchema),
     defaultValues: {
+      email: verifiedEmail || "",
       academic_session: "2026-2027",
       declaration: isEditMode,
       education: {
@@ -85,6 +88,13 @@ export default function RegistrationForm({
       },
     },
   });
+
+  // Sync verified email into form if provided
+  useEffect(() => {
+    if (verifiedEmail) {
+      setValue("email", verifiedEmail, { shouldValidate: true });
+    }
+  }, [verifiedEmail, setValue]);
 
   // Populate initial values in edit mode
   useEffect(() => {
@@ -463,7 +473,11 @@ export default function RegistrationForm({
           <PersonalDetailsSection register={register} errors={errors} />
 
           {/* 2. Contact Details */}
-          <ContactDetailsSection register={register} errors={errors} />
+          <ContactDetailsSection
+            register={register}
+            errors={errors}
+            isEmailLocked={!!verifiedEmail}
+          />
 
           {/* 3. Course Details */}
           <CourseDetailsSection register={register} errors={errors} />

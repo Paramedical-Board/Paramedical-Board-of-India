@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { registrationSchema } from '@/lib/validations/registration';
 import { verifyToken, COOKIE_NAME } from '@/lib/auth';
+import { isEmailVerified } from '@/lib/otp';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,6 +22,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Validation failed', details: parsed.error.flatten() },
         { status: 400 }
+      );
+    }
+
+    const emailVerified = await isEmailVerified(parsed.data.email, 'student_verification');
+    if (!emailVerified) {
+      return NextResponse.json(
+        { error: 'Email not verified, please complete OTP verification first' },
+        { status: 403 }
       );
     }
 

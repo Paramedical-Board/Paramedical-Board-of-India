@@ -9,9 +9,10 @@ import {
 interface Props {
   register: UseFormRegister<StudentRegistrationFormData>;
   errors: FieldErrors<StudentRegistrationFormData>;
+  isEmailLocked?: boolean;
 }
 
-export default function ContactDetailsSection({ register, errors }: Props) {
+export default function ContactDetailsSection({ register, errors, isEmailLocked = false }: Props) {
   return (
     <div className="bg-white rounded-lg border border-slate-200/90 shadow-sm overflow-hidden mb-6">
       {/* Section Header */}
@@ -57,16 +58,29 @@ export default function ContactDetailsSection({ register, errors }: Props) {
 
         {/* Email */}
         <div>
-          <label className="block text-xs sm:text-[13px] font-semibold text-slate-800 mb-1.5">
-            Email Address / ईमेल पता <span className="text-[#B13B1C]">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs sm:text-[13px] font-semibold text-slate-800">
+              Email Address / ईमेल पता <span className="text-[#B13B1C]">*</span>
+            </label>
+            {isEmailLocked && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+                Verified / सत्यापित
+              </span>
+            )}
+          </div>
           <input
             type="email"
+            readOnly={isEmailLocked}
             placeholder="e.g. candidate@example.com"
-            className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-md transition-colors placeholder:text-slate-400 text-slate-900 focus:outline-none focus:ring-2 ${
-              errors.email
-                ? "border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
-                : "border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"
+            className={`w-full px-3.5 py-2.5 text-sm rounded-md transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2 ${
+              isEmailLocked
+                ? "bg-slate-100 text-slate-700 font-medium cursor-not-allowed border-slate-300 select-none shadow-inner"
+                : errors.email
+                ? "bg-white text-slate-900 border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
+                : "bg-white text-slate-900 border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"
             }`}
             {...register("email")}
           />

@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Metadata } from "next";
-import RegistrationForm from "@/components/student/registration/RegistrationForm";
+import StudentRegistrationGatedView from "@/components/student/registration/StudentRegistrationGatedView";
 
 export const metadata: Metadata = {
   title: "Register Student | College Portal",
@@ -69,8 +69,8 @@ export default function DashboardStudentRegisterPage() {
           </ul>
         </div>
 
-        {/* Student Registration Form */}
-        <RegistrationForm />
+        {/* Student Email Verification & Registration Flow */}
+        <StudentRegistrationGatedView />
       </main>
     </div>
   );
