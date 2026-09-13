@@ -25,6 +25,7 @@ export interface ResultData {
   mother_name: string;
   dob: string;
   course: string;
+  photo_url?: string | null;
   session_label: string;
   exam_year_label: string;
   center_name: string;
@@ -53,7 +54,7 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select(
-      "registration_no, roll_no, candidate_name, father_name, mother_name, dob, course, status, admit_card_generated_at"
+      "registration_no, roll_no, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at"
     )
     .eq("id", registrationId)
     .single();
@@ -191,6 +192,7 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
       mother_name: reg.mother_name,
       dob: reg.dob,
       course: reg.course,
+      photo_url: reg.photo_url ?? null,
       session_label: config.session_label,
       exam_year_label: config.exam_year_label,
       center_name: center?.center_name ?? "",

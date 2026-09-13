@@ -88,8 +88,11 @@ export default function AdmitCardLayout({
           >
             इण्डियन पैरामेडिकल बोर्ड ऑफ़ इण्डिया
           </h2>
-          <p className="text-[10px] sm:text-[10.5px] text-slate-600 font-medium mt-0.5">
-            An Autonomous Board Registered Under Govt. Act | Examination Division
+          <p className="text-[9.5px] sm:text-[10px] text-slate-700 font-semibold mt-0.5 leading-tight">
+            (An Autonomous Organization Under Section-8 Indian Trust Act 2013)
+          </p>
+          <p className="text-[8.5px] sm:text-[9px] text-slate-600 font-medium leading-tight">
+            (An ISO 9001:2015 Certified Council)
           </p>
         </div>
 

@@ -82,8 +82,11 @@ export default function ResultLayout({
           >
             इण्डियन पैरामेडिकल बोर्ड ऑफ़ इण्डिया
           </h2>
-          <p className="text-[9.5px] sm:text-[10px] text-slate-600 font-medium mt-0.5">
-            An Autonomous Board Registered Under Govt. Act | Examination Division
+          <p className="text-[9.5px] sm:text-[10px] text-slate-700 font-semibold mt-0.5 leading-tight">
+            (An Autonomous Organization Under Section-8 Indian Trust Act 2013)
+          </p>
+          <p className="text-[8.5px] sm:text-[9px] text-slate-600 font-medium leading-tight">
+            (An ISO 9001:2015 Certified Council)
           </p>
         </div>
 
@@ -116,61 +119,97 @@ export default function ResultLayout({
           CANDIDATE &amp; EXAMINATION PARTICULARS
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] sm:text-[11.5px] leading-snug">
-          {/* Candidate Name */}
-          <div className="flex items-baseline">
-            <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Candidate Name</span>
-            <span className="text-slate-600 font-semibold mr-1.5">:</span>
-            <span className="text-[#0b2545] font-bold uppercase">{result.candidate_name || "—"}</span>
+        <div className="flex items-start justify-between gap-4">
+          {/* Details Grid */}
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] sm:text-[11.5px] leading-snug">
+            {/* Candidate Name */}
+            <div className="flex items-baseline">
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Candidate Name</span>
+              <span className="text-slate-600 font-semibold mr-1.5">:</span>
+              <span className="text-[#0b2545] font-bold uppercase">{result.candidate_name || "—"}</span>
+            </div>
+
+            {/* Roll Number */}
+            <div className="flex items-baseline">
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Roll Number</span>
+              <span className="text-slate-600 font-semibold mr-1.5">:</span>
+              <span className="text-[#0b2545] font-bold font-mono tracking-wide">{result.roll_no || "—"}</span>
+            </div>
+
+            {/* Father's Name */}
+            <div className="flex items-baseline">
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Father&apos;s Name</span>
+              <span className="text-slate-600 font-semibold mr-1.5">:</span>
+              <span className="text-[#0b2545] font-bold uppercase">{result.father_name || "—"}</span>
+            </div>
+
+            {/* Registration No. */}
+            <div className="flex items-baseline">
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Registration No.</span>
+              <span className="text-slate-600 font-semibold mr-1.5">:</span>
+              <span className="text-[#0b2545] font-bold font-mono">{result.registration_no || "—"}</span>
+            </div>
+
+            {/* Mother's Name */}
+            <div className="flex items-baseline">
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Mother&apos;s Name</span>
+              <span className="text-slate-600 font-semibold mr-1.5">:</span>
+              <span className="text-[#0b2545] font-bold uppercase">{result.mother_name || "—"}</span>
+            </div>
+
+            {/* Date of Birth */}
+            <div className="flex items-baseline">
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Date of Birth</span>
+              <span className="text-slate-600 font-semibold mr-1.5">:</span>
+              <span className="text-[#0b2545] font-bold">{formatDisplayDate(result.dob)}</span>
+            </div>
+
+            {/* Course Name (Full width) */}
+            <div className="flex items-baseline sm:col-span-2">
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Course Name</span>
+              <span className="text-slate-600 font-semibold mr-1.5">:</span>
+              <span className="text-[#0b2545] font-bold uppercase">{result.course || "—"}</span>
+            </div>
+
+            {/* Center / Institution (Full width) */}
+            <div className="flex items-baseline sm:col-span-2">
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Institution / Centre</span>
+              <span className="text-slate-600 font-semibold mr-1.5">:</span>
+              <span className="text-[#0b2545] font-bold uppercase">{result.center_name || "—"}</span>
+            </div>
           </div>
 
-          {/* Roll Number */}
-          <div className="flex items-baseline">
-            <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Roll Number</span>
-            <span className="text-slate-600 font-semibold mr-1.5">:</span>
-            <span className="text-[#0b2545] font-bold font-mono tracking-wide">{result.roll_no || "—"}</span>
-          </div>
-
-          {/* Father's Name */}
-          <div className="flex items-baseline">
-            <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Father&apos;s Name</span>
-            <span className="text-slate-600 font-semibold mr-1.5">:</span>
-            <span className="text-[#0b2545] font-bold uppercase">{result.father_name || "—"}</span>
-          </div>
-
-          {/* Registration No. */}
-          <div className="flex items-baseline">
-            <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Registration No.</span>
-            <span className="text-slate-600 font-semibold mr-1.5">:</span>
-            <span className="text-[#0b2545] font-bold font-mono">{result.registration_no || "—"}</span>
-          </div>
-
-          {/* Mother's Name */}
-          <div className="flex items-baseline">
-            <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Mother&apos;s Name</span>
-            <span className="text-slate-600 font-semibold mr-1.5">:</span>
-            <span className="text-[#0b2545] font-bold uppercase">{result.mother_name || "—"}</span>
-          </div>
-
-          {/* Date of Birth */}
-          <div className="flex items-baseline">
-            <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Date of Birth</span>
-            <span className="text-slate-600 font-semibold mr-1.5">:</span>
-            <span className="text-[#0b2545] font-bold">{formatDisplayDate(result.dob)}</span>
-          </div>
-
-          {/* Course Name (Full width) */}
-          <div className="flex items-baseline sm:col-span-2">
-            <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Course Name</span>
-            <span className="text-slate-600 font-semibold mr-1.5">:</span>
-            <span className="text-[#0b2545] font-bold uppercase">{result.course || "—"}</span>
-          </div>
-
-          {/* Center / Institution (Full width) */}
-          <div className="flex items-baseline sm:col-span-2">
-            <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Institution / Centre</span>
-            <span className="text-slate-600 font-semibold mr-1.5">:</span>
-            <span className="text-[#0b2545] font-bold uppercase">{result.center_name || "—"}</span>
+          {/* Photo Box */}
+          <div className="w-[110px] h-[126px] shrink-0 border border-slate-400 rounded bg-[#f8fafc] overflow-hidden flex flex-col items-center justify-center p-1 text-center">
+            {result.photo_url ? (
+              <img
+                src={result.photo_url}
+                alt={result.candidate_name}
+                className="w-full h-full object-cover rounded-xs"
+              />
+            ) : (
+              <div className="w-full h-full border border-dashed border-slate-400 rounded-xs flex flex-col items-center justify-center p-1.5 text-slate-500">
+                <svg
+                  className="w-6 h-6 text-slate-400 mb-1"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                  />
+                </svg>
+                <span className="text-[8.5px] font-bold text-slate-700 uppercase leading-tight">
+                  Candidate Photo
+                </span>
+                <span className="text-[7px] text-slate-400 font-medium mt-0.5">
+                  (Passport Size)
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
