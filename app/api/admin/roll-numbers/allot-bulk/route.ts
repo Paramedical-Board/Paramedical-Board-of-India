@@ -12,31 +12,28 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { course_name } = body;
+  const { session_id } = body;
 
-  if (!course_name) {
-    return NextResponse.json({ error: "course_name is required" }, { status: 400 });
+  if (!session_id) {
+    return NextResponse.json({ error: "session_id is required" }, { status: 400 });
   }
 
-  const { data: config, error: configError } = await supabaseAdmin
-    .from("course_exam_config")
-    .select("*, exam_centers(center_code)")
-    .eq("course_name", course_name)
+  const { data: session, error: sessionError } = await supabaseAdmin
+    .from("exam_sessions")
+    .select("course_name, exam_year_label, exam_centers(center_code)")
+    .eq("id", session_id)
     .single();
 
-  if (configError || !config) {
-    return NextResponse.json(
-      { error: "No exam config found for this course. Set session, exam year, and center first." },
-      { status: 400 }
-    );
+  if (sessionError || !session) {
+    return NextResponse.json({ error: "Exam session not found" }, { status: 400 });
   }
 
-  const centerCode = config.exam_centers?.center_code;
+  const centerCode = (session.exam_centers as unknown as { center_code: string } | null)?.center_code;
   if (!centerCode) {
     return NextResponse.json({ error: "Assigned exam center has no center_code set" }, { status: 400 });
   }
 
-  const yearMatch = config.exam_year_label.match(/\d{4}/);
+  const yearMatch = session.exam_year_label.match(/\d{4}/);
   if (!yearMatch) {
     return NextResponse.json({ error: "Could not extract a 4-digit year from exam_year_label" }, { status: 400 });
   }
@@ -66,7 +63,7 @@ export async function POST(req: NextRequest) {
   const { data: students, error: studentsError } = await supabaseAdmin
     .from("student_registrations")
     .select("id")
-    .eq("course", course_name)
+    .eq("course", session.course_name)
     .eq("status", "approved")
     .is("roll_no", null)
     .order("created_at", { ascending: true });
@@ -84,9 +81,9 @@ export async function POST(req: NextRequest) {
     const rollNo = `${prefix}${String(nextSeq).padStart(4, "0")}`;
     const { data: updated, error: updateError } = await supabaseAdmin
       .from("student_registrations")
-      .update({ roll_no: rollNo })
+      .update({ roll_no: rollNo, exam_session_id: session_id })
       .eq("id", student.id)
-      .select("id, roll_no")
+      .select("id, roll_no, exam_session_id")
       .single();
 
     if (updateError) {

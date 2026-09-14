@@ -331,14 +331,14 @@ export default function AdmitCardLayout({
         </div>
 
         {/* Controller of Examination */}
-        <div className="text-center w-[180px]">
+        <div className="text-center min-w-[190px]">
           <div className="h-[36px]"></div>
           <div className="border-t border-slate-400 pt-1">
             <span className="text-[10.5px] font-bold text-[#0b2545] block">
               Controller of Examination
             </span>
-            <span className="text-[9px] text-slate-500 block">
-              Indian Paramedical Board
+            <span className="text-[9px] text-slate-500 block whitespace-nowrap">
+              Indian Paramedical Board of India
             </span>
           </div>
         </div>

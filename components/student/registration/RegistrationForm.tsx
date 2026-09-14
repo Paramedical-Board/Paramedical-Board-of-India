@@ -217,7 +217,7 @@ export default function RegistrationForm({
         category: formValues.category,
         gender: formValues.gender,
         mobile: formValues.mobile,
-        email: formValues.email,
+        email: formValues.email.trim().toLowerCase(),
         academic_session: formValues.academic_session,
         address: formValues.address,
         district: formValues.district,

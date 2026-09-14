@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const emailVerified = await isEmailVerified(parsed.data.email, 'student_verification');
+    const normalizedEmail = parsed.data.email.trim().toLowerCase();
+    const emailVerified = await isEmailVerified(normalizedEmail, 'student_verification');
     if (!emailVerified) {
       return NextResponse.json(
         { error: 'Email not verified, please complete OTP verification first' },
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('student_registrations')
-      .insert({ ...parsed.data, college_id: session.college_id })
+      .insert({ ...parsed.data, email: normalizedEmail, college_id: session.college_id })
       .select()
       .single();
 

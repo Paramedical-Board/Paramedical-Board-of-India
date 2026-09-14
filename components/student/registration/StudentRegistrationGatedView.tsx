@@ -94,6 +94,7 @@ export default function StudentRegistrationGatedView() {
         return;
       }
 
+      setEmail(cleanEmail);
       setVerificationState("verified");
       setError(null);
     } catch (err: any) {

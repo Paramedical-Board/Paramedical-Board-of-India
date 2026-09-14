@@ -32,7 +32,9 @@ export interface AdmitCardResult {
 export async function getAdmitCardData(registrationId: string): Promise<AdmitCardResult> {
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
-    .select("registration_no, roll_no, candidate_name, father_name, dob, course, photo_url, status, admit_card_generated_at")
+    .select(
+      "registration_no, roll_no, candidate_name, father_name, dob, course, photo_url, status, admit_card_generated_at, exam_session_id"
+    )
     .eq("id", registrationId)
     .single();
 
@@ -48,17 +50,21 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
     return { data: null, error: "Roll number has not been allotted yet" };
   }
 
-  const { data: config, error: configError } = await supabaseAdmin
-    .from("course_exam_config")
-    .select("session_label, exam_year_label, exam_centers(center_name, center_code, address, city)")
-    .eq("course_name", reg.course)
-    .single();
-
-  if (configError || !config) {
-    return { data: null, error: "Exam session/year/center has not been configured for this course"};
+  if (!reg.exam_session_id) {
+    return { data: null, error: "Student has not been assigned to an exam session yet" };
   }
 
-  const center = config.exam_centers as unknown as {
+  const { data: session, error: sessionError } = await supabaseAdmin
+    .from("exam_sessions")
+    .select("session_label, exam_year_label, exam_centers(center_name, center_code, address, city)")
+    .eq("id", reg.exam_session_id)
+    .single();
+
+  if (sessionError || !session) {
+    return { data: null, error: "Exam session details are missing" };
+  }
+
+  const center = session.exam_centers as unknown as {
     center_name: string;
     center_code: string;
     address: string | null;
@@ -66,7 +72,7 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
   } | null;
 
   if (!center) {
-    return { data: null, error: "Exam center details are missing for this course's config" };
+    return { data: null, error: "Exam center details are missing for this session" };
   }
 
   const { data: subjectRows, error: subjectError } = await supabaseAdmin
@@ -88,7 +94,8 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
   const { data: dateRows, error: dateError } = await supabaseAdmin
     .from("datesheets")
     .select("subject_id, exam_date, exam_time")
-    .in("subject_id", subjectIds);
+    .in("subject_id", subjectIds)
+    .eq("exam_session_id", reg.exam_session_id);
 
   if (dateError) {
     return { data: null, error: dateError.message };
@@ -102,7 +109,7 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
   });
 
   if (incomplete) {
-    return { data: null, error: "Datesheet is not complete for all subjects in this course" };
+    return { data: null, error: "Datesheet is not complete for all subjects in this session" };
   }
 
   const subjects: AdmitCardSubject[] = subjectRows.map((s) => {
@@ -137,8 +144,8 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
       dob: reg.dob,
       course: reg.course,
       photo_url: reg.photo_url,
-      session_label: config.session_label,
-      exam_year_label: config.exam_year_label,
+      session_label: session.session_label,
+      exam_year_label: session.exam_year_label,
       center_name: center.center_name,
       center_code: center.center_code,
       center_address: center.address,

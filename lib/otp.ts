@@ -16,11 +16,12 @@ export async function requestOtp(
   email: string,
   purpose: OtpPurpose
 ): Promise<{ success: boolean; error?: string }> {
+  const normalizedEmail = email.trim().toLowerCase();
   const cooldownSince = new Date(Date.now() - RESEND_COOLDOWN_SECONDS * 1000).toISOString();
   const { data: recent } = await supabaseAdmin
     .from('otp_verifications')
     .select('id, created_at')
-    .eq('email', email)
+    .eq('email', normalizedEmail)
     .eq('purpose', purpose)
     .gte('created_at', cooldownSince)
     .order('created_at', { ascending: false })
@@ -35,7 +36,7 @@ export async function requestOtp(
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
   const { error } = await supabaseAdmin.from('otp_verifications').insert({
-    email,
+    email: normalizedEmail,
     otp_hash: otpHash,
     purpose,
     expires_at: expiresAt,
@@ -49,7 +50,7 @@ export async function requestOtp(
   }
 
   try {
-    await sendOtpEmail(email, otp, purpose);
+    await sendOtpEmail(normalizedEmail, otp, purpose);
   } catch (err) {
     console.error('OTP email send error:', err);
     return { success: false, error: 'Failed to send OTP email' };
@@ -63,10 +64,11 @@ export async function verifyOtp(
   purpose: OtpPurpose,
   otpInput: string
 ): Promise<{ success: boolean; error?: string }> {
+  const normalizedEmail = email.trim().toLowerCase();
   const { data: rows, error } = await supabaseAdmin
     .from('otp_verifications')
     .select('id, otp_hash, expires_at, verified, attempt_count')
-    .eq('email', email)
+    .eq('email', normalizedEmail)
     .eq('purpose', purpose)
     .order('created_at', { ascending: false })
     .limit(1);
@@ -111,10 +113,11 @@ export async function isEmailVerified(
   email: string,
   purpose: OtpPurpose
 ): Promise<boolean> {
+  const normalizedEmail = email.trim().toLowerCase();
   const { data } = await supabaseAdmin
     .from('otp_verifications')
     .select('id')
-    .eq('email', email)
+    .eq('email', normalizedEmail)
     .eq('purpose', purpose)
     .eq('verified', true)
     .limit(1);

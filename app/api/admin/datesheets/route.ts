@@ -12,8 +12,9 @@ export async function GET(req: NextRequest) {
   }
 
   const courseName = req.nextUrl.searchParams.get("course_name");
-  if (!courseName) {
-    return NextResponse.json({ error: "course_name is required" }, { status: 400 });
+  const sessionId = req.nextUrl.searchParams.get("session_id");
+  if (!courseName || !sessionId) {
+    return NextResponse.json({ error: "course_name and session_id are both required" }, { status: 400 });
   }
 
   const { data: subjectRows, error: subjectError } = await supabaseAdmin
@@ -26,20 +27,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: subjectError.message }, { status: 500 });
   }
 
-  const subjectIds = subjectRows.map((s) => s.id);
+  const subjectIds = (subjectRows ?? []).map((s) => s.id);
 
   const { data: dateRows, error: dateError } = await supabaseAdmin
     .from("datesheets")
     .select("subject_id, exam_date, exam_time")
-    .in("subject_id", subjectIds.length > 0 ? subjectIds : ["00000000-0000-0000-0000-000000000000"]);
+    .in("subject_id", subjectIds.length > 0 ? subjectIds : ["00000000-0000-0000-0000-000000000000"])
+    .eq("exam_session_id", sessionId);
 
   if (dateError) {
     return NextResponse.json({ error: dateError.message }, { status: 500 });
   }
 
-  const dateMap = new Map(dateRows.map((d) => [d.subject_id, d]));
+  const dateMap = new Map((dateRows ?? []).map((d) => [d.subject_id, d]));
 
-  const subjects = subjectRows.map((s) => ({
+  const subjects = (subjectRows ?? []).map((s) => ({
     id: s.id,
     subject_name: s.subject_name,
     subject_code: s.subject_code,
@@ -62,11 +64,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { subject_id, exam_date, exam_time } = body;
+  const { subject_id, exam_session_id, exam_date, exam_time } = body;
 
-  if (!subject_id || !exam_date || !exam_time) {
+  if (!subject_id || !exam_session_id || !exam_date || !exam_time) {
     return NextResponse.json(
-      { error: "subject_id, exam_date, and exam_time are all required" },
+      { error: "subject_id, exam_session_id, exam_date, and exam_time are all required" },
       { status: 400 }
     );
   }
@@ -84,8 +86,8 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabaseAdmin
     .from("datesheets")
     .upsert(
-      { subject_id, course_name: subject.course_name, exam_date, exam_time },
-      { onConflict: "subject_id" }
+      { subject_id, exam_session_id, course_name: subject.course_name, exam_date, exam_time },
+      { onConflict: "subject_id,exam_session_id" }
     )
     .select()
     .single();

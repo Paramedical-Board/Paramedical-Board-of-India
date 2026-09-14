@@ -25,7 +25,7 @@ export interface ResultData {
   mother_name: string;
   dob: string;
   course: string;
-  photo_url?: string | null;
+  photo_url: string | null;
   session_label: string;
   exam_year_label: string;
   center_name: string;
@@ -54,7 +54,7 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select(
-      "registration_no, roll_no, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at"
+      "registration_no, roll_no, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, exam_session_id"
     )
     .eq("id", registrationId)
     .single();
@@ -71,17 +71,21 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
     return { data: null, error: "Admit card has not been generated for this student yet" };
   }
 
-  const { data: config, error: configError } = await supabaseAdmin
-    .from("course_exam_config")
-    .select("session_label, exam_year_label, exam_centers(center_name)")
-    .eq("course_name", reg.course)
-    .single();
-
-  if (configError || !config) {
-    return { data: null, error: "Exam session/year/center has not been configured for this course" };
+  if (!reg.exam_session_id) {
+    return { data: null, error: "Student has not been assigned to an exam session yet" };
   }
 
-  const center = config.exam_centers as unknown as { center_name: string } | null;
+  const { data: session, error: sessionError } = await supabaseAdmin
+    .from("exam_sessions")
+    .select("session_label, exam_year_label, exam_centers(center_name)")
+    .eq("id", reg.exam_session_id)
+    .single();
+
+  if (sessionError || !session) {
+    return { data: null, error: "Exam session details are missing" };
+  }
+
+  const center = session.exam_centers as unknown as { center_name: string } | null;
 
   const { data: subjectRows, error: subjectError } = await supabaseAdmin
     .from("course_subjects")
@@ -192,9 +196,9 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
       mother_name: reg.mother_name,
       dob: reg.dob,
       course: reg.course,
-      photo_url: reg.photo_url ?? null,
-      session_label: config.session_label,
-      exam_year_label: config.exam_year_label,
+      photo_url: reg.photo_url,
+      session_label: session.session_label,
+      exam_year_label: session.exam_year_label,
       center_name: center?.center_name ?? "",
       subjects,
       grand_total_obtained: grandTotalObtained,

@@ -179,4 +179,4 @@ export const GENDERS = [
   { value: "Other", label: "Other / अन्य" },
 ] as const;
 
-export const SESSIONS = ["2026-2027", "2025-2026", "2024-2025"];
+export const SESSIONS = ["2026-2027", "2025-2026", "2024-2025", "2023-2024"];
