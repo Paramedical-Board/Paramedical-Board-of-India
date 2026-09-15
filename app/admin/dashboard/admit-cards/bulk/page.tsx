@@ -8,8 +8,12 @@ import { getAdmitCardData, AdmitCardData } from "@/lib/admit-card-data";
 import AdmitCardLayout from "@/components/AdmitCardLayout";
 import PrintButton from "@/components/PrintButton";
 
+import { getBatchAcademicSessionFromSessionLabel } from "@/lib/course-session-utils";
+
+import { checkStudentFirstYearPassed } from "@/lib/result-data";
+
 interface BulkPageProps {
-  searchParams: Promise<{ course_name?: string }>;
+  searchParams: Promise<{ course_name?: string; academic_session?: string; session_label?: string; year_number?: string }>;
 }
 
 export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps) {
@@ -21,7 +25,7 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
     redirect("/admin/login");
   }
 
-  const { course_name } = await searchParams;
+  const { course_name, academic_session, session_label, year_number } = await searchParams;
 
   if (!course_name) {
     return (
@@ -57,13 +61,24 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
     );
   }
 
-  // Fetch approved registrations for this course
-  const { data: registrations, error: regError } = await supabaseAdmin
+  // Fetch approved registrations for this course and session
+  let query = supabaseAdmin
     .from("student_registrations")
     .select("id, registration_no, candidate_name")
     .eq("course", course_name)
     .eq("status", "approved")
     .order("created_at", { ascending: true });
+
+  if (academic_session) {
+    query = query.eq("academic_session", academic_session);
+  } else if (session_label) {
+    const resolved = getBatchAcademicSessionFromSessionLabel(session_label);
+    if (resolved) {
+      query = query.eq("academic_session", resolved);
+    }
+  }
+
+  const { data: registrations, error: regError } = await query;
 
   if (regError) {
     return (
@@ -82,11 +97,25 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
     );
   }
 
+  const isSecondYear = session_label?.includes("2nd Year") || year_number === "2";
   const admitCards: AdmitCardData[] = [];
   const skipped: { id: string; registration_no: string; candidate_name: string; reason: string }[] = [];
 
   if (registrations && registrations.length > 0) {
     for (const reg of registrations) {
+      if (isSecondYear) {
+        const check = await checkStudentFirstYearPassed(reg.id);
+        if (!check.passed) {
+          skipped.push({
+            id: reg.id,
+            registration_no: reg.registration_no,
+            candidate_name: reg.candidate_name,
+            reason: check.reason || "1st Year examination not cleared / pending",
+          });
+          continue;
+        }
+      }
+
       const { data, error } = await getAdmitCardData(reg.id);
       if (error || !data) {
         skipped.push({

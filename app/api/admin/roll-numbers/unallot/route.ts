@@ -1,0 +1,60 @@
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifyAdminToken } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase";
+
+export async function POST(req: NextRequest) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_session")?.value;
+  const admin = token ? verifyAdminToken(token) : null;
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { registration_id } = body;
+
+  if (!registration_id) {
+    return NextResponse.json({ error: "registration_id is required" }, { status: 400 });
+  }
+
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from("student_registrations")
+    .select("id, roll_no")
+    .eq("id", registration_id)
+    .maybeSingle();
+
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
+  if (!existing) {
+    return NextResponse.json({ error: "Registration not found" }, { status: 404 });
+  }
+  if (!existing.roll_no) {
+    return NextResponse.json({ error: "This student has no roll number to un-allot" }, { status: 400 });
+  }
+
+  // Delete any entered marks first (they're keyed by registration_id, and this
+  // is a full reset back to "approved, awaiting allotment").
+  const { error: marksDeleteError } = await supabaseAdmin
+    .from("student_subject_marks")
+    .delete()
+    .eq("registration_id", registration_id);
+
+  if (marksDeleteError) {
+    return NextResponse.json({ error: marksDeleteError.message }, { status: 500 });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("student_registrations")
+    .update({ roll_no: null, exam_session_id: null, admit_card_generated_at: null })
+    .eq("id", registration_id)
+    .select("id, registration_no, candidate_name, course")
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, registration: data });
+}

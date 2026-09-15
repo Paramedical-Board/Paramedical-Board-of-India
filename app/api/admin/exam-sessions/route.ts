@@ -38,19 +38,52 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { course_name, session_label, exam_year_label, exam_center_id } = body;
+  const { course_name, session_label, exam_year_label, exam_center_id, academic_session } = body;
+  let centerId = exam_center_id;
+  if (!centerId) {
+    const { data: firstCenter } = await supabaseAdmin
+      .from("exam_centers")
+      .select("id")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    centerId = firstCenter?.id ?? null;
+  }
 
-  if (!course_name || !session_label || !exam_year_label || !exam_center_id) {
+  if (!course_name || !session_label || !exam_year_label) {
     return NextResponse.json(
-      { error: "course_name, session_label, exam_year_label, and exam_center_id are all required" },
+      { error: "course_name, session_label, and exam_year_label are required" },
       { status: 400 }
     );
   }
 
+  const { data: existing } = await supabaseAdmin
+    .from("exam_sessions")
+    .select("id, session_label, exam_year_label, exam_center_id, academic_session")
+    .eq("course_name", course_name)
+    .eq("session_label", session_label)
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json({ session: existing }, { status: 200 });
+  }
+
+  const insertPayload: Record<string, any> = {
+    course_name,
+    session_label,
+    exam_year_label,
+  };
+  if (centerId) {
+    insertPayload.exam_center_id = centerId;
+  }
+  if (academic_session) {
+    insertPayload.academic_session = academic_session;
+  }
+
   const { data, error } = await supabaseAdmin
     .from("exam_sessions")
-    .insert({ course_name, session_label, exam_year_label, exam_center_id })
-    .select()
+    .insert(insertPayload)
+    .select("id, session_label, exam_year_label, exam_center_id, academic_session")
     .single();
 
   if (error) {

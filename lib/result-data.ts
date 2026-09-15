@@ -29,6 +29,9 @@ export interface ResultData {
   session_label: string;
   exam_year_label: string;
   center_name: string;
+  center_code?: string | null;
+  center_address?: string | null;
+  center_city?: string | null;
   subjects: ResultSubject[];
   grand_total_obtained: number;
   grand_total_max: number;
@@ -54,7 +57,7 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select(
-      "registration_no, roll_no, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, exam_session_id"
+      "registration_no, roll_no, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, exam_session_id, college_id, colleges(college_name, username)"
     )
     .eq("id", registrationId)
     .single();
@@ -77,7 +80,7 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
 
   const { data: session, error: sessionError } = await supabaseAdmin
     .from("exam_sessions")
-    .select("session_label, exam_year_label, exam_centers(center_name)")
+    .select("session_label, exam_year_label")
     .eq("id", reg.exam_session_id)
     .single();
 
@@ -85,7 +88,13 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
     return { data: null, error: "Exam session details are missing" };
   }
 
-  const center = session.exam_centers as unknown as { center_name: string } | null;
+  const college = reg.colleges as unknown as {
+    college_name?: string;
+    username?: string;
+  } | null;
+
+  const centerName = college?.college_name || "Self Examination Center (Affiliated Institute)";
+  const centerCode = college?.username?.toUpperCase() || "IPBI";
 
   const { data: subjectRows, error: subjectError } = await supabaseAdmin
     .from("course_subjects")
@@ -199,7 +208,10 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
       photo_url: reg.photo_url,
       session_label: session.session_label,
       exam_year_label: session.exam_year_label,
-      center_name: center?.center_name ?? "",
+      center_name: centerName,
+      center_code: centerCode,
+      center_address: null,
+      center_city: null,
       subjects,
       grand_total_obtained: grandTotalObtained,
       grand_total_max: grandTotalMax,
@@ -253,4 +265,20 @@ export async function isCourseResultsReleased(courseName: string): Promise<boole
   }
 
   return true;
+}
+
+export async function checkStudentFirstYearPassed(
+  registrationId: string
+): Promise<{ passed: boolean; reason?: string }> {
+  const { data, error } = await getResultData(registrationId);
+  if (error || !data) {
+    return { passed: false, reason: error || "No result found for 1st Year" };
+  }
+  if (data.final_result === "PASS") {
+    return { passed: true };
+  }
+  if (data.final_result === "FAIL") {
+    return { passed: false, reason: "1st Year exam result is FAIL" };
+  }
+  return { passed: false, reason: "1st Year marks incomplete" };
 }

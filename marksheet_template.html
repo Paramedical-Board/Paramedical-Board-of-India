@@ -71,6 +71,32 @@
         .top-section {
             display: flex;
             flex-direction: column;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .watermark-bg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 440px;
+            height: 440px;
+            opacity: 0.18;
+            pointer-events: none;
+            z-index: 0;
+            user-select: none;
+        }
+
+        .watermark-bg img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         /* Header */
@@ -232,17 +258,18 @@
         }
 
         .marks-table thead tr {
-            background-color: #0b2545;
-            color: #ffffff;
+            background-color: rgba(241, 245, 249, 0.6);
+            color: #0b2545;
+            border-bottom: 1px solid #cbd5e1;
         }
 
         .marks-table th {
             padding: 9.5px 8px;
-            font-weight: 700;
+            font-weight: 800;
             letter-spacing: 0.5px;
             font-size: 10.5px;
-            color: #ffffff !important;
-            border-right: 1px solid #1e3a6a;
+            color: #0b2545 !important;
+            border-right: 1px solid #cbd5e1;
             text-align: center;
         }
 
@@ -434,6 +461,11 @@
 
     <!-- Main A4 Marksheet Container -->
     <div class="marksheet-container">
+        <!-- Background Center Logo Watermark (Option A: ~390px) -->
+        <div class="watermark-bg" style="top: 48%; width: 390px; height: 390px; opacity: 0.18;">
+            <img src="./public/logo.png" alt="watermark" />
+        </div>
+
         <div class="top-section">
             <!-- Header -->
             <div class="header">
@@ -510,7 +542,7 @@
                     <div class="detail-row full-width">
                         <span class="detail-label">Course Name</span>
                         <span class="detail-colon">:</span>
-                        <span class="detail-val">DIPLOMA IN COMMUNITY MEDICAL SERVICE & ESSENTIAL DRUGS (CMS&ED)</span>
+                        <span class="detail-val">COMMUNITY MEDICAL SERVICES & ESSENTIAL DRUGS (CMS & ED)</span>
                     </div>
 
                     <div class="detail-row full-width">
@@ -636,7 +668,7 @@
 
             <div class="footer-right">
                 <div class="sig-space"></div>
-                <div class="sig-title">Controller of Examination</div>
+                <div class="sig-title">Secretary / सचिव</div>
                 <div class="sig-sub">Indian Paramedical Board of India</div>
             </div>
         </div>

@@ -320,25 +320,12 @@ export default function AdmitCardLayout({
           </div>
         </div>
 
-        {/* Center Seal Box */}
-        <div className="w-[140px] h-[54px] border border-dashed border-slate-400 rounded flex flex-col items-center justify-center bg-[#fafafa]">
-          <span className="text-[9.5px] font-bold text-slate-700 uppercase">
-            CENTRE SEAL
-          </span>
-          <span className="text-[8px] text-slate-400">
-            Stamp & Signature
-          </span>
-        </div>
-
-        {/* Controller of Examination */}
+        {/* Principal Signature and Seal */}
         <div className="text-center min-w-[190px]">
           <div className="h-[36px]"></div>
           <div className="border-t border-slate-400 pt-1">
             <span className="text-[10.5px] font-bold text-[#0b2545] block">
-              Controller of Examination
-            </span>
-            <span className="text-[9px] text-slate-500 block whitespace-nowrap">
-              Indian Paramedical Board of India
+              Principal Signature and Seal
             </span>
           </div>
         </div>

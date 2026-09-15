@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyAdminToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getBatchAcademicSessionFromSessionLabel } from "@/lib/course-session-utils";
+import { checkStudentFirstYearPassed } from "@/lib/result-data";
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -12,7 +14,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { session_id } = body;
+  const { session_id, academic_session } = body;
 
   if (!session_id) {
     return NextResponse.json({ error: "session_id is required" }, { status: 400 });
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const { data: session, error: sessionError } = await supabaseAdmin
     .from("exam_sessions")
-    .select("course_name, exam_year_label, exam_centers(center_code)")
+    .select("course_name, session_label, exam_year_label")
     .eq("id", session_id)
     .single();
 
@@ -28,17 +30,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Exam session not found" }, { status: 400 });
   }
 
-  const centerCode = (session.exam_centers as unknown as { center_code: string } | null)?.center_code;
-  if (!centerCode) {
-    return NextResponse.json({ error: "Assigned exam center has no center_code set" }, { status: 400 });
-  }
-
   const yearMatch = session.exam_year_label.match(/\d{4}/);
   if (!yearMatch) {
     return NextResponse.json({ error: "Could not extract a 4-digit year from exam_year_label" }, { status: 400 });
   }
   const yearSuffix = yearMatch[0].slice(-2);
-  const prefix = `${centerCode}${yearSuffix}`;
+  const prefix = `BPC${yearSuffix}`;
 
   const { data: existing, error: existingError } = await supabaseAdmin
     .from("student_registrations")
@@ -60,24 +57,63 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const { data: students, error: studentsError } = await supabaseAdmin
+  const targetAcademicSession =
+    academic_session || getBatchAcademicSessionFromSessionLabel(session.session_label);
+
+  let query = supabaseAdmin
     .from("student_registrations")
-    .select("id")
+    .select("id, candidate_name, registration_no")
     .eq("course", session.course_name)
     .eq("status", "approved")
     .is("roll_no", null)
     .order("created_at", { ascending: true });
 
+  if (targetAcademicSession) {
+    query = query.eq("academic_session", targetAcademicSession);
+  }
+
+  const { data: students, error: studentsError } = await query;
+
   if (studentsError) {
     return NextResponse.json({ error: studentsError.message }, { status: 500 });
   }
 
-  if (students.length === 0) {
-    return NextResponse.json({ allotted: 0, message: "No eligible students (approved, without roll_no) found for this course" });
+  if (!students || students.length === 0) {
+    return NextResponse.json({ allotted: 0, message: "No eligible students (approved, without roll_no) found for this course and session" });
+  }
+
+  const isSecondYear = session.session_label?.includes("2nd Year");
+  const eligibleStudents = [];
+  const skippedStudents = [];
+
+  for (const student of students) {
+    if (isSecondYear) {
+      const check = await checkStudentFirstYearPassed(student.id);
+      if (!check.passed) {
+        skippedStudents.push({
+          id: student.id,
+          registration_no: student.registration_no,
+          candidate_name: student.candidate_name,
+          reason: check.reason || "1st Year result not cleared",
+        });
+        continue;
+      }
+    }
+    eligibleStudents.push(student);
+  }
+
+  if (eligibleStudents.length === 0) {
+    return NextResponse.json({
+      allotted: 0,
+      skipped: skippedStudents,
+      message: isSecondYear
+        ? "0 students allotted: Candidates have not cleared/completed 1st Year examinations yet."
+        : "No eligible students found for roll number allotment.",
+    });
   }
 
   const results = [];
-  for (const student of students) {
+  for (const student of eligibleStudents) {
     const rollNo = `${prefix}${String(nextSeq).padStart(4, "0")}`;
     const { data: updated, error: updateError } = await supabaseAdmin
       .from("student_registrations")

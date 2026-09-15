@@ -21,6 +21,16 @@ export default function ResultLayout({
   result,
   className = "",
 }: ResultLayoutProps) {
+  // Format center info (Center Name, Code, Address, City) like Admit Card
+  const centerDisplay = [
+    result.center_name,
+    result.center_code ? `(Code: ${result.center_code})` : null,
+    result.center_address,
+    result.center_city,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   const overallPercentage =
     result.grand_total_max > 0
       ? (Math.round((result.grand_total_obtained / result.grand_total_max) * 10000) / 100).toFixed(2)
@@ -60,8 +70,20 @@ export default function ResultLayout({
         }
       `}</style>
 
+      {/* Background Watermark (Option A: Grand Middle Span ~390px) */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-[220px] bottom-[260px] flex items-center justify-center overflow-hidden z-0 select-none"
+        aria-hidden="true"
+      >
+        <img
+          src="/logo.png"
+          alt=""
+          className="w-[390px] h-[390px] max-w-[80%] object-contain opacity-[0.18] select-none"
+        />
+      </div>
+
       {/* 1. Header with Board Logo & Titles */}
-      <div className="flex items-center justify-between gap-3 pb-2 relative">
+      <div className="flex items-center justify-between gap-3 pb-2 relative z-10">
         {/* Left Circular Logo */}
         <div className="w-[74px] h-[74px] shrink-0 relative flex items-center justify-center">
           <img
@@ -90,20 +112,15 @@ export default function ResultLayout({
           </p>
         </div>
 
-        {/* Right Spacer / Seal Placeholder for balance */}
-        <div className="w-[74px] shrink-0 hidden sm:flex items-center justify-end">
-          <div className="w-14 h-14 border border-slate-300 rounded-full flex flex-col items-center justify-center text-[7.5px] text-slate-400 font-bold uppercase text-center p-1 leading-tight">
-            <span>OFFICIAL</span>
-            <span>SEAL</span>
-          </div>
-        </div>
+        {/* Spacer to keep Title perfectly centered */}
+        <div className="w-[74px] shrink-0 hidden sm:block"></div>
       </div>
 
       {/* Maroon Divider */}
-      <div className="h-[2.5px] bg-[#8b0000] w-full my-2"></div>
+      <div className="h-[2.5px] bg-[#8b0000] w-full my-2 relative z-10"></div>
 
       {/* 2. Statement of Marks Title Banner */}
-      <div className="text-center my-2">
+      <div className="text-center my-2 relative z-10">
         <div className="inline-block px-6 py-1 bg-[#0b2545] text-white font-bold text-xs sm:text-sm tracking-wider uppercase rounded-xs">
           STATEMENT OF MARKS / अंक तालिका
         </div>
@@ -114,7 +131,7 @@ export default function ResultLayout({
       </div>
 
       {/* 3. Candidate & Examination Details Box */}
-      <div className="border border-slate-300 rounded-md p-3 mb-3 bg-white">
+      <div className="border border-slate-300 rounded-md p-3 mb-3 bg-white/60 relative z-10">
         <div className="text-[11px] font-bold text-[#8b0000] uppercase tracking-wider mb-2">
           CANDIDATE &amp; EXAMINATION PARTICULARS
         </div>
@@ -175,7 +192,7 @@ export default function ResultLayout({
             <div className="flex items-baseline sm:col-span-2">
               <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Institution / Centre</span>
               <span className="text-slate-600 font-semibold mr-1.5">:</span>
-              <span className="text-[#0b2545] font-bold uppercase">{result.center_name || "—"}</span>
+              <span className="text-[#0b2545] font-bold uppercase">{centerDisplay || result.center_name || "—"}</span>
             </div>
           </div>
 
@@ -215,32 +232,32 @@ export default function ResultLayout({
       </div>
 
       {/* 4. Subject Marks Table */}
-      <div className="border border-slate-300 rounded-xs overflow-hidden mb-3">
-        <table className="w-full border-collapse text-[10.5px] sm:text-[11px] text-left">
+      <div className="border border-slate-300 rounded-xs overflow-hidden mb-3 relative z-10">
+        <table className="w-full border-collapse text-[10.5px] sm:text-[11px] text-left relative z-10">
           <thead>
-            <tr className="bg-[#0b2545] text-white">
-              <th className="py-2 px-2.5 font-bold border-r border-[#1e3a6a] w-[14%] text-center">
+            <tr className="bg-slate-100/60 text-[#0b2545] border-b border-slate-300 font-extrabold uppercase tracking-wider">
+              <th className="py-2 px-2.5 font-extrabold border-r border-slate-300 w-[14%] text-center">
                 CODE
               </th>
-              <th className="py-2 px-3 font-bold border-r border-[#1e3a6a] w-[34%]">
+              <th className="py-2 px-3 font-extrabold border-r border-slate-300 w-[34%] text-left">
                 SUBJECT NAME
               </th>
-              <th className="py-2 px-2 font-bold border-r border-[#1e3a6a] w-[10%] text-center">
+              <th className="py-2 px-2 font-extrabold border-r border-slate-300 w-[10%] text-center">
                 MAX
               </th>
-              <th className="py-2 px-2 font-bold border-r border-[#1e3a6a] w-[9%] text-center">
+              <th className="py-2 px-2 font-extrabold border-r border-slate-300 w-[9%] text-center">
                 THEORY
               </th>
-              <th className="py-2 px-2 font-bold border-r border-[#1e3a6a] w-[9%] text-center">
+              <th className="py-2 px-2 font-extrabold border-r border-slate-300 w-[9%] text-center">
                 PRACTICAL
               </th>
-              <th className="py-2 px-2 font-bold border-r border-[#1e3a6a] w-[8%] text-center">
+              <th className="py-2 px-2 font-extrabold border-r border-slate-300 w-[8%] text-center">
                 CA
               </th>
-              <th className="py-2 px-2 font-bold border-r border-[#1e3a6a] w-[8%] text-center">
+              <th className="py-2 px-2 font-extrabold border-r border-slate-300 w-[8%] text-center">
                 TOTAL
               </th>
-              <th className="py-2 px-2 font-bold w-[8%] text-center">
+              <th className="py-2 px-2 font-extrabold w-[8%] text-center">
                 GRADE
               </th>
             </tr>
@@ -252,7 +269,7 @@ export default function ResultLayout({
                 return (
                   <tr
                     key={subj.subject_id || subj.subject_code || index}
-                    className={index % 2 === 1 ? "bg-[#f8fafc]" : "bg-white"}
+                    className={index % 2 === 1 ? "bg-slate-50/40" : "bg-transparent"}
                   >
                     <td className="py-2 px-2 text-center font-mono font-bold text-[#0b2545] border-r border-slate-200">
                       {subj.subject_code}
@@ -274,7 +291,7 @@ export default function ResultLayout({
                     </td>
                     <td
                       className={`py-2 px-2 text-center font-mono font-bold border-r border-slate-200 ${
-                        isFail ? "text-red-700 bg-red-50" : "text-[#0b2545]"
+                        isFail ? "text-red-700 bg-red-50/70" : "text-[#0b2545]"
                       }`}
                     >
                       {subj.total_marks !== null ? subj.total_marks : "—"}
@@ -291,14 +308,14 @@ export default function ResultLayout({
               })
             ) : (
               <tr>
-                <td colSpan={8} className="py-4 text-center text-slate-500 italic">
+                <td colSpan={8} className="py-4 text-center text-slate-500 italic bg-transparent">
                   No subjects found
                 </td>
               </tr>
             )}
 
             {/* Grand Total Row */}
-            <tr className="bg-slate-100 font-bold border-t-2 border-slate-400 text-slate-900">
+            <tr className="bg-slate-100/70 font-bold border-t-2 border-slate-400 text-slate-900">
               <td colSpan={2} className="py-2.5 px-3 text-right uppercase tracking-wider border-r border-slate-300">
                 Grand Total / कुल प्राप्तांक:
               </td>
@@ -320,7 +337,7 @@ export default function ResultLayout({
       </div>
 
       {/* 5. Summary & Result Box */}
-      <div className="border border-slate-300 rounded-md p-3 mb-3 bg-[#fafafa] flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="border border-slate-300 rounded-md p-3 mb-3 bg-[#fafafa]/60 flex flex-col sm:flex-row items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-6 text-xs font-semibold text-slate-700">
           <div>
             <span>Total Marks: </span>
@@ -340,15 +357,15 @@ export default function ResultLayout({
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase text-slate-600">Final Result:</span>
           {result.final_result === "PASS" ? (
-            <span className="px-4 py-1.5 bg-emerald-100 border border-emerald-400 text-emerald-800 font-extrabold text-xs sm:text-sm uppercase tracking-wider rounded">
+            <span className="px-4 py-1.5 bg-emerald-100/90 border border-emerald-400 text-emerald-800 font-extrabold text-xs sm:text-sm uppercase tracking-wider rounded">
               PASS / उत्तीर्ण ✓
             </span>
           ) : result.final_result === "FAIL" ? (
-            <span className="px-4 py-1.5 bg-red-100 border border-red-400 text-red-800 font-extrabold text-xs sm:text-sm uppercase tracking-wider rounded">
+            <span className="px-4 py-1.5 bg-red-100/90 border border-red-400 text-red-800 font-extrabold text-xs sm:text-sm uppercase tracking-wider rounded">
               FAIL / अनुत्तीर्ण ✕
             </span>
           ) : (
-            <span className="px-4 py-1.5 bg-amber-100 border border-amber-400 text-amber-800 font-extrabold text-xs sm:text-sm uppercase tracking-wider rounded">
+            <span className="px-4 py-1.5 bg-amber-100/90 border border-amber-400 text-amber-800 font-extrabold text-xs sm:text-sm uppercase tracking-wider rounded">
               INCOMPLETE / अपूर्ण
             </span>
           )}
@@ -356,7 +373,7 @@ export default function ResultLayout({
       </div>
 
       {/* 6. Grading Criteria Legend */}
-      <div className="border border-slate-200 rounded p-2 mb-3 bg-white text-[9px] text-slate-600">
+      <div className="border border-slate-200 rounded p-2 mb-3 bg-white/60 text-[9px] text-slate-600 relative z-10">
         <div className="font-bold text-slate-700 uppercase mb-1">
           Grading Scale &amp; Passing Criteria:
         </div>
@@ -372,37 +389,14 @@ export default function ResultLayout({
         </div>
       </div>
 
-      {/* 7. Signatures & Controller Block */}
-      <div className="flex items-end justify-between px-2 pt-4 pb-1 mt-2">
-        {/* Tabulator / Prepared By */}
-        <div className="text-center w-[160px]">
-          <div className="h-[34px]"></div>
-          <div className="border-t border-slate-400 pt-1">
-            <span className="text-[10.5px] font-bold text-[#0b2545] block">
-              Tabulator / Prepared By
-            </span>
-            <span className="text-[8.5px] text-slate-500 block">
-              Examination Division
-            </span>
-          </div>
-        </div>
-
-        {/* Center Board Seal */}
-        <div className="w-[120px] h-[50px] border border-dashed border-slate-400 rounded flex flex-col items-center justify-center bg-[#fafafa]">
-          <span className="text-[9px] font-bold text-slate-700 uppercase">
-            BOARD SEAL
-          </span>
-          <span className="text-[7.5px] text-slate-400">
-            Stamp &amp; Verification
-          </span>
-        </div>
-
-        {/* Controller of Examination */}
+      {/* 7. Signatures & Secretary Block */}
+      <div className="flex items-end justify-end px-2 pt-4 pb-1 mt-2 relative z-10">
+        {/* Secretary / सचिव */}
         <div className="text-center min-w-[190px]">
           <div className="h-[34px]"></div>
           <div className="border-t border-slate-400 pt-1">
             <span className="text-[10.5px] font-bold text-[#0b2545] block">
-              Controller of Examination
+              Secretary / सचिव
             </span>
             <span className="text-[8.5px] text-slate-500 block whitespace-nowrap">
               Indian Paramedical Board of India

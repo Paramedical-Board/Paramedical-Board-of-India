@@ -21,10 +21,10 @@ export interface CertificateCourse {
 
 export const CERTIFICATE_COURSES_DATA: CertificateCourse[] = [
   {
-    id: "ccmsed",
-    code: "CCMS & ED",
-    title: "Certificate in Community Medical Services & Essential Drugs",
-    hindiTitle: "कम्युनिटी मेडिकल सर्विसेज एवं एसेंशियल ड्रग्स में सर्टिफिकेट",
+    id: "cmsed",
+    code: "CMS & ED",
+    title: "Community Medical Services & Essential Drugs",
+    hindiTitle: "कम्युनिटी मेडिकल सर्विसेज एवं एसेंशियल ड्रग्स",
     category: "Community & Primary Health",
     duration: "1 Year / 18 Months",
     eligibility: "10th / 10+2 Pass",
@@ -357,16 +357,16 @@ export default function CoursesPage() {
             <div className="flex-1 max-w-2xl">
               <div className="flex items-center gap-2 mb-3">
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-slate-200 border border-white/15">
-                  Course Code: CCMS &amp; ED
+                  Course Code: CMS &amp; ED
                 </span>
               </div>
 
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-snug">
-                Certificate in Community Medical Services &amp; Essential Drugs
+                Community Medical Services &amp; Essential Drugs
               </h2>
 
               <p className="text-sm sm:text-base font-semibold text-[#F1E4C3] mt-1.5">
-                कम्युनिटी मेडिकल सर्विसेज एवं एसेंशियल ड्रग्स में सर्टिफिकेट
+                कम्युनिटी मेडिकल सर्विसेज एवं एसेंशियल ड्रग्स
               </p>
 
               <p className="text-xs sm:text-sm text-slate-200 mt-3 leading-relaxed">

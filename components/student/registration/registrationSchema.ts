@@ -158,7 +158,7 @@ export const PARAMEDICAL_COURSES = [
   "Certificate in Medical Radiology & Imaging Technology (CMRIT)",
   "Certificate in Emergency Medical Technician (CEMT)",
   "Certificate in Child Care & Education (CCCE)",
-  "Certificate in Community Medical Services & Essential Drugs (CCMS & ED)",
+  "Community Medical Services & Essential Drugs (CMS & ED)",
   "Certificate in First Aid & CPR (First Aid & CPR)",
   "Certificate in Blood Bank Technology (CBBT)",
   "Certificate in Multipurpose Health Worker (CMHW)",

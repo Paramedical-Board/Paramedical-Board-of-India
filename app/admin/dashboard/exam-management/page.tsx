@@ -4,6 +4,11 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PARAMEDICAL_COURSES } from "@/components/student/registration/registrationSchema";
+import {
+  getCourseSessionOptions,
+  isTwoYearCourse,
+  CourseSessionOption,
+} from "@/lib/course-session-utils";
 
 interface SubjectItem {
   id: string;
@@ -49,16 +54,27 @@ interface ResultStudentItem {
   registration_no: string;
   candidate_name: string;
   roll_no: string;
+  first_year_passed?: boolean;
+  first_year_reason?: string;
 }
 
 export default function ExamManagementHubPage() {
   const router = useRouter();
-  const [selectedCourse, setSelectedCourse] = useState<string>(PARAMEDICAL_COURSES[0]);
-  const [activeTab, setActiveTab] = useState<"subjects" | "datesheet" | "sessions" | "roll_admit" | "results">("subjects");
 
-  // Centers list (shared for Sessions dropdown)
-  const [centers, setCenters] = useState<ExamCenter[]>([]);
-  const [loadingCenters, setLoadingCenters] = useState(false);
+  // Primary Course & Session Selection (Header)
+  const [selectedCourse, setSelectedCourse] = useState<string>(PARAMEDICAL_COURSES[0]);
+  const [selectedSessionKey, setSelectedSessionKey] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"subjects" | "datesheet" | "roll_admit" | "results">("subjects");
+
+  // Dynamic Session Options based on course duration
+  const sessionOptions = useMemo(() => {
+    return getCourseSessionOptions(selectedCourse);
+  }, [selectedCourse]);
+
+  const activeSessionOption = useMemo<CourseSessionOption>(() => {
+    const found = sessionOptions.find((o) => o.key === selectedSessionKey);
+    return found || sessionOptions[0];
+  }, [sessionOptions, selectedSessionKey]);
 
   // Tab A: Subjects State
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
@@ -79,12 +95,12 @@ export default function ExamManagementHubPage() {
   const [editCaMax, setEditCaMax] = useState("");
   const [savingEditSubject, setSavingEditSubject] = useState(false);
 
-  // Sessions State (Shared by Sessions tab, Datesheet tab, Roll Numbers tab)
+  // Sessions State from Backend
   const [sessions, setSessions] = useState<ExamSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [activeSession, setActiveSession] = useState<ExamSession | null>(null);
 
   // Tab B: Datesheet State
-  const [selectedDatesheetSessionId, setSelectedDatesheetSessionId] = useState<string>("");
   const [datesheetSubjects, setDatesheetSubjects] = useState<DatesheetSubjectItem[]>([]);
   const [datesheetComplete, setDatesheetComplete] = useState<boolean>(false);
   const [loadingDatesheet, setLoadingDatesheet] = useState(false);
@@ -95,42 +111,17 @@ export default function ExamManagementHubPage() {
   const [savingDateRowId, setSavingDateRowId] = useState<string | null>(null);
   const [dateRowSuccessMsg, setDateRowSuccessMsg] = useState<Record<string, string>>({});
 
-  // Tab C: Session Management State
-  const [editingSession, setEditingSession] = useState<ExamSession | null>(null);
-  const [sessionLabel, setSessionLabel] = useState("");
-  const [examYearLabel, setExamYearLabel] = useState("");
-  const [examCenterId, setExamCenterId] = useState("");
-  const [savingSession, setSavingSession] = useState(false);
-  const [sessionSuccessMsg, setSessionSuccessMsg] = useState<string | null>(null);
-  const [sessionErrorMsg, setSessionErrorMsg] = useState<string | null>(null);
-
-  // Tab D: Roll Numbers & Admit Cards State
-  const [selectedAllotSessionId, setSelectedAllotSessionId] = useState<string>("");
+  // Tab C (previously D): Roll Numbers & Admit Cards State
   const [allottingRolls, setAllottingRolls] = useState(false);
   const [allotResultMsg, setAllotResultMsg] = useState<string | null>(null);
   const [allotError, setAllotError] = useState<string | null>(null);
+  const [allottedResults, setAllottedResults] = useState<Array<{ id: string; roll_no: string; exam_session_id?: string }>>([]);
 
-  // Tab E: Results State
+  // Tab D (previously E): Results State
   const [resultStudents, setResultStudents] = useState<ResultStudentItem[]>([]);
   const [resultsReleased, setResultsReleased] = useState<boolean>(false);
   const [loadingResults, setLoadingResults] = useState(false);
   const [resultsError, setResultsError] = useState<string | null>(null);
-
-  // Fetch all exam centers
-  const fetchCenters = async () => {
-    try {
-      setLoadingCenters(true);
-      const res = await fetch("/api/admin/exam-centers");
-      const data = await res.json();
-      if (res.ok) {
-        setCenters(data.centers || []);
-      }
-    } catch (err) {
-      console.error("Fetch centers error:", err);
-    } finally {
-      setLoadingCenters(false);
-    }
-  };
 
   // Fetch Tab A: Subjects
   const fetchSubjects = async (course: string) => {
@@ -152,47 +143,61 @@ export default function ExamManagementHubPage() {
     }
   };
 
-  // Fetch Sessions for the course
-  const fetchSessions = useCallback(async (course: string, preferredSessionId?: string) => {
-    try {
-      setLoadingSessions(true);
-      setSessionErrorMsg(null);
-      const res = await fetch(`/api/admin/exam-sessions?course_name=${encodeURIComponent(course)}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setSessionErrorMsg(data.error || "Failed to load exam sessions");
+  // Fetch Sessions for the course & ensure active session
+  const fetchSessions = useCallback(
+    async (course: string, targetSessionLabel?: string) => {
+      try {
+        setLoadingSessions(true);
+        const res = await fetch(`/api/admin/exam-sessions?course_name=${encodeURIComponent(course)}`);
+        const data = await res.json();
+        if (!res.ok) return [];
+
+        const list: ExamSession[] = data.sessions || [];
+        setSessions(list);
+
+        const currentOpt = targetSessionLabel || activeSessionOption?.session_label;
+        let matched = list.find((s) => s.session_label === currentOpt);
+
+        // Auto-provision if missing and session label exists
+        if (!matched && currentOpt) {
+          const opt = sessionOptions.find((o) => o.session_label === currentOpt) || activeSessionOption;
+          try {
+            const createRes = await fetch("/api/admin/exam-sessions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                course_name: course,
+                session_label: opt.session_label,
+                exam_year_label: opt.exam_year_label,
+                academic_session: opt.academic_session,
+              }),
+            });
+            const createData = await createRes.json();
+            if (createRes.ok && createData.session) {
+              matched = createData.session;
+              setSessions((prev) => [matched!, ...prev]);
+            }
+          } catch (autoErr) {
+            console.error("Auto provision session error:", autoErr);
+          }
+        }
+
+        if (matched) {
+          setActiveSession(matched);
+        } else {
+          setActiveSession(null);
+        }
+
+        return list;
+      } catch (err) {
+        console.error("Fetch sessions error:", err);
         return [];
+      } finally {
+        setLoadingSessions(false);
       }
-      const list: ExamSession[] = data.sessions || [];
-      setSessions(list);
-
-      // Manage Datesheet Session Selection
-      setSelectedDatesheetSessionId((prev) => {
-        const targetId = preferredSessionId || prev;
-        if (targetId && list.some((s) => s.id === targetId)) {
-          return targetId;
-        }
-        return list.length > 0 ? list[0].id : "";
-      });
-
-      // Manage Allot Session Selection
-      setSelectedAllotSessionId((prev) => {
-        const targetId = preferredSessionId || prev;
-        if (targetId && list.some((s) => s.id === targetId)) {
-          return targetId;
-        }
-        return list.length > 0 ? list[0].id : "";
-      });
-
-      return list;
-    } catch (err) {
-      console.error("Fetch sessions error:", err);
-      setSessionErrorMsg("Network error loading exam sessions.");
-      return [];
-    } finally {
-      setLoadingSessions(false);
-    }
-  }, []);
+    },
+    [activeSessionOption, sessionOptions]
+  );
 
   // Fetch Tab B: Datesheet (scoped to course & session_id)
   const fetchDatesheet = useCallback(async (course: string, sessionId: string) => {
@@ -234,11 +239,25 @@ export default function ExamManagementHubPage() {
   }, []);
 
   // Fetch Tab E: Results
-  const fetchResults = async (course: string) => {
+  const fetchResults = async (
+    course: string,
+    targetAcademicSession?: string,
+    sessionLabel?: string,
+    yearNum?: number
+  ) => {
     try {
       setLoadingResults(true);
       setResultsError(null);
-      const res = await fetch(`/api/admin/results?course_name=${encodeURIComponent(course)}`);
+      const sessionParam = targetAcademicSession ?? activeSessionOption?.academic_session;
+      const labelParam = sessionLabel ?? activeSessionOption?.session_label;
+      const yrParam = yearNum ?? activeSessionOption?.year_number;
+
+      let url = `/api/admin/results?course_name=${encodeURIComponent(course)}`;
+      if (sessionParam) url += `&academic_session=${encodeURIComponent(sessionParam)}`;
+      if (labelParam) url += `&session_label=${encodeURIComponent(labelParam)}`;
+      if (yrParam) url += `&year_number=${encodeURIComponent(String(yrParam))}`;
+
+      const res = await fetch(url);
       const data = await res.json();
       if (!res.ok) {
         setResultsError(data.error || "Failed to load eligible students for result entry");
@@ -254,37 +273,43 @@ export default function ExamManagementHubPage() {
     }
   };
 
-  // Initial load
-  useEffect(() => {
-    fetchCenters();
-  }, []);
 
-  // Course change load
+  // Course change: update default session option
   useEffect(() => {
-    if (selectedCourse) {
-      fetchSubjects(selectedCourse);
-      fetchSessions(selectedCourse);
-      fetchResults(selectedCourse);
-      setEditingSession(null);
-      setSessionLabel("");
-      setExamYearLabel("");
-      setExamCenterId(centers.length > 0 ? centers[0].id : "");
-      setSessionSuccessMsg(null);
-      setSessionErrorMsg(null);
-      setAllotResultMsg(null);
-      setAllotError(null);
+    const opts = getCourseSessionOptions(selectedCourse);
+    if (opts.length > 0) {
+      setSelectedSessionKey(opts[0].key);
     }
-  }, [selectedCourse, centers, fetchSessions]);
+    fetchSubjects(selectedCourse);
+    setAllotResultMsg(null);
+    setAllotError(null);
+    setAllottedResults([]);
+  }, [selectedCourse]);
 
-  // When selected datesheet session changes, reload datesheet
+  // When course or session key changes, sync sessions, datesheet & results
   useEffect(() => {
-    if (selectedCourse && selectedDatesheetSessionId) {
-      fetchDatesheet(selectedCourse, selectedDatesheetSessionId);
+    if (selectedCourse && activeSessionOption) {
+      fetchSessions(selectedCourse, activeSessionOption.session_label);
+      fetchResults(
+        selectedCourse,
+        activeSessionOption.academic_session,
+        activeSessionOption.session_label,
+        activeSessionOption.year_number
+      );
+    }
+  }, [selectedCourse, activeSessionOption, fetchSessions]);
+
+  // When active session is loaded, fetch its datesheet
+  useEffect(() => {
+    if (selectedCourse && activeSession?.id) {
+      setDatesheetFormValues({});
+      setDateRowSuccessMsg({});
+      fetchDatesheet(selectedCourse, activeSession.id);
     } else {
       setDatesheetSubjects([]);
       setDatesheetComplete(false);
     }
-  }, [selectedCourse, selectedDatesheetSessionId, fetchDatesheet]);
+  }, [selectedCourse, activeSession?.id, fetchDatesheet]);
 
   // Handlers for Tab A: Subjects
   const handleAddSubject = async (e: React.FormEvent) => {
@@ -330,8 +355,8 @@ export default function ExamManagementHubPage() {
       setNewPracticalMax("");
       setNewCaMax("");
       fetchSubjects(selectedCourse);
-      if (selectedDatesheetSessionId) {
-        fetchDatesheet(selectedCourse, selectedDatesheetSessionId);
+      if (activeSession?.id) {
+        fetchDatesheet(selectedCourse, activeSession.id);
       }
     } catch (err) {
       console.error("Add subject error:", err);
@@ -371,8 +396,8 @@ export default function ExamManagementHubPage() {
       }
       setEditingSubject(null);
       fetchSubjects(selectedCourse);
-      if (selectedDatesheetSessionId) {
-        fetchDatesheet(selectedCourse, selectedDatesheetSessionId);
+      if (activeSession?.id) {
+        fetchDatesheet(selectedCourse, activeSession.id);
       }
     } catch (err) {
       console.error("Edit subject error:", err);
@@ -399,21 +424,47 @@ export default function ExamManagementHubPage() {
       alert("Please provide both Exam Date and Exam Time.");
       return;
     }
-    if (!selectedDatesheetSessionId) {
-      alert("Please select an exam session first.");
-      return;
-    }
 
     setSavingDateRowId(subjectId);
     setDateRowSuccessMsg((prev) => ({ ...prev, [subjectId]: "" }));
 
     try {
+      let targetSessionId = activeSession?.id;
+
+      // If activeSession is not yet populated, dynamically ensure/provision it now
+      if (!targetSessionId && selectedCourse && activeSessionOption) {
+        const createRes = await fetch("/api/admin/exam-sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            course_name: selectedCourse,
+            session_label: activeSessionOption.session_label,
+            exam_year_label: activeSessionOption.exam_year_label,
+            academic_session: activeSessionOption.academic_session,
+          }),
+        });
+        const createData = await createRes.json();
+        if (createRes.ok && createData.session?.id) {
+          targetSessionId = createData.session.id;
+          setActiveSession(createData.session);
+          setSessions((prev) => [createData.session, ...prev.filter((s) => s.id !== createData.session.id)]);
+        } else {
+          alert(createData.error || "Please wait for exam session to initialize.");
+          return;
+        }
+      }
+
+      if (!targetSessionId) {
+        alert("Please ensure exam session is ready.");
+        return;
+      }
+
       const res = await fetch("/api/admin/datesheets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject_id: subjectId,
-          exam_session_id: selectedDatesheetSessionId,
+          exam_session_id: targetSessionId,
           exam_date: row.exam_date,
           exam_time: row.exam_time,
         }),
@@ -424,7 +475,7 @@ export default function ExamManagementHubPage() {
         return;
       }
       setDateRowSuccessMsg((prev) => ({ ...prev, [subjectId]: "Saved ✓" }));
-      fetchDatesheet(selectedCourse, selectedDatesheetSessionId);
+      fetchDatesheet(selectedCourse, targetSessionId);
     } catch (err) {
       console.error("Save datesheet row error:", err);
       alert("Network error saving datesheet entry.");
@@ -433,104 +484,14 @@ export default function ExamManagementHubPage() {
     }
   };
 
-  // Handlers for Tab C: Exam Sessions Management
-  const handleStartEditSession = (s: ExamSession) => {
-    setEditingSession(s);
-    setSessionLabel(s.session_label || "");
-    setExamYearLabel(s.exam_year_label || "");
-    setExamCenterId(s.exam_center_id || "");
-    setSessionSuccessMsg(null);
-    setSessionErrorMsg(null);
-  };
-
-  const handleCancelEditSession = () => {
-    setEditingSession(null);
-    setSessionLabel("");
-    setExamYearLabel("");
-    setExamCenterId(centers.length > 0 ? centers[0].id : "");
-    setSessionSuccessMsg(null);
-    setSessionErrorMsg(null);
-  };
-
-  const handleSaveSession = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const sLabel = sessionLabel.trim();
-    const yLabel = examYearLabel.trim();
-    const cId = examCenterId.trim();
-
-    if (!sLabel || !yLabel || !cId) {
-      setSessionErrorMsg("Session label, exam year label, and exam center are all required.");
-      return;
-    }
-
-    setSavingSession(true);
-    setSessionErrorMsg(null);
-    setSessionSuccessMsg(null);
-
-    try {
-      if (editingSession) {
-        // Edit existing session
-        const res = await fetch(`/api/admin/exam-sessions/${editingSession.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_label: sLabel,
-            exam_year_label: yLabel,
-            exam_center_id: cId,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setSessionErrorMsg(data.error || "Failed to update exam session.");
-          return;
-        }
-        setSessionSuccessMsg("Exam session updated successfully!");
-        const updatedList = await fetchSessions(selectedCourse, editingSession.id);
-        if (selectedDatesheetSessionId === editingSession.id) {
-          fetchDatesheet(selectedCourse, editingSession.id);
-        }
-        handleCancelEditSession();
-      } else {
-        // Create new session
-        const res = await fetch("/api/admin/exam-sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            course_name: selectedCourse,
-            session_label: sLabel,
-            exam_year_label: yLabel,
-            exam_center_id: cId,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setSessionErrorMsg(data.error || "Failed to create exam session.");
-          return;
-        }
-        setSessionSuccessMsg("New exam session created successfully!");
-        const newSessionId = data.session?.id;
-        await fetchSessions(selectedCourse, newSessionId);
-        handleCancelEditSession();
-      }
-    } catch (err) {
-      console.error("Save session error:", err);
-      setSessionErrorMsg("Network error saving exam session.");
-    } finally {
-      setSavingSession(false);
-    }
-  };
-
-  // Handlers for Tab D: Roll Numbers Allotment
+  // Handlers for Tab C (previously D): Roll Numbers Allotment
   const handleAllotRollNumbers = async () => {
-    if (!selectedAllotSessionId) {
-      setAllotError("Please select an exam session before allotting roll numbers.");
+    if (!activeSession?.id) {
+      setAllotError("No active exam session found for allotment.");
       return;
     }
 
-    const currentSession = sessions.find((s) => s.id === selectedAllotSessionId);
-    const sessionName = currentSession
-      ? `${currentSession.session_label} · ${currentSession.exam_year_label}`
-      : "selected session";
+    const sessionName = `${activeSessionOption.label}`;
 
     if (
       !confirm(
@@ -543,22 +504,29 @@ export default function ExamManagementHubPage() {
     setAllottingRolls(true);
     setAllotResultMsg(null);
     setAllotError(null);
+    setAllottedResults([]);
 
     try {
       const res = await fetch("/api/admin/roll-numbers/allot-bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: selectedAllotSessionId }),
+        body: JSON.stringify({
+          session_id: activeSession.id,
+          academic_session: activeSessionOption.academic_session,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setAllotError(data.error || "Failed to allot roll numbers.");
         return;
       }
+      if (data.results && Array.isArray(data.results)) {
+        setAllottedResults(data.results);
+      }
       if (data.allotted > 0) {
-        setAllotResultMsg(`Success: ${data.allotted} roll numbers successfully allotted!`);
+        setAllotResultMsg(`Success: ${data.allotted} roll numbers successfully allotted for ${sessionName}!`);
       } else {
-        setAllotResultMsg(data.message || "0 students needed roll numbers (all eligible approved students already have roll numbers).");
+        setAllotResultMsg(data.message || "0 students needed roll numbers (all approved students in this batch already have roll numbers).");
       }
     } catch (err) {
       console.error("Allot roll numbers error:", err);
@@ -568,14 +536,24 @@ export default function ExamManagementHubPage() {
     }
   };
 
+  // Ensure datesheet rows always contain all course subjects
+  const displayDatesheetRows = useMemo<DatesheetSubjectItem[]>(() => {
+    if (datesheetSubjects.length > 0) return datesheetSubjects;
+    return subjects.map((s) => ({
+      id: s.id,
+      subject_name: s.subject_name,
+      subject_code: s.subject_code,
+      exam_date: null,
+      exam_time: null,
+    }));
+  }, [datesheetSubjects, subjects]);
+
   // Missing count calculation for datesheet banner
   const missingDatesheetCount = useMemo(() => {
-    return datesheetSubjects.filter((s) => !s.exam_date || !s.exam_time).length;
-  }, [datesheetSubjects]);
+    return displayDatesheetRows.filter((s) => !s.exam_date || !s.exam_time).length;
+  }, [displayDatesheetRows]);
 
-  const activeDatesheetSession = useMemo(() => {
-    return sessions.find((s) => s.id === selectedDatesheetSessionId);
-  }, [sessions, selectedDatesheetSessionId]);
+  const is2Year = isTwoYearCourse(selectedCourse);
 
   return (
     <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
@@ -591,28 +569,23 @@ export default function ExamManagementHubPage() {
               Exam Management Hub / परीक्षा प्रबंधन
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-              Configure course subjects, exam sessions, datesheets, examination centers, roll number allotment, and bulk admit cards.
+              Select course and academic session to configure datesheets, roll numbers, and admit cards.
             </p>
           </div>
-
-          {/* Quick Action Link to Manage Exam Centers */}
-          <Link
-            href="/admin/dashboard/exam-management/centers"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#143E66] hover:bg-[#0c2a47] text-white text-xs font-bold uppercase tracking-wider rounded-md shadow-sm transition-all self-start md:self-auto"
-          >
-            <svg className="w-4 h-4 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <span>Manage Exam Centers ({centers.length})</span>
-          </Link>
         </div>
 
-        {/* Course Selector Dropdown */}
-        <div className="mt-5 bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex-1 w-full">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Select Paramedical Course / पाठ्यक्रम चुनें:
-            </label>
+        {/* Course & Session Selector Dual Panel */}
+        <div className="mt-5 bg-slate-50 p-5 rounded-lg border border-slate-200 grid grid-cols-1 lg:grid-cols-12 gap-5 items-end">
+          {/* 1. Course Selector */}
+          <div className="lg:col-span-6">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Select Course / पाठ्यक्रम चुनें:
+              </label>
+              <span className="text-[11px] font-bold text-[#143E66] px-2 py-0.5 bg-blue-50 border border-blue-200 rounded">
+                {is2Year ? "2 Years Duration" : "1 Year Duration"}
+              </span>
+            </div>
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
@@ -626,8 +599,31 @@ export default function ExamManagementHubPage() {
             </select>
           </div>
 
-          {/* Quick Course Status Badges */}
-          <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {/* 2. Academic Session Selector (Dynamic based on course duration) */}
+          <div className="lg:col-span-6">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Select Academic Session / सत्र चुनें:
+              </label>
+              <span className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                Exam Year: <strong className="text-[#143E66]">{activeSessionOption.exam_year_label}</strong>
+              </span>
+            </div>
+            <select
+              value={selectedSessionKey}
+              onChange={(e) => setSelectedSessionKey(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-[#143E66] focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
+            >
+              {sessionOptions.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Quick Course & Session Status Badges */}
+          <div className="lg:col-span-12 flex items-center gap-2 flex-wrap pt-2 border-t border-slate-200/80">
             <span
               className={`px-2.5 py-1 rounded text-[11px] font-bold border ${
                 subjects.length > 0
@@ -635,16 +631,16 @@ export default function ExamManagementHubPage() {
                   : "bg-slate-100 text-slate-600 border-slate-200"
               }`}
             >
-              {subjects.length} Subjects
+              {subjects.length} Subjects Defined
             </span>
             <span
               className={`px-2.5 py-1 rounded text-[11px] font-bold border ${
-                sessions.length > 0
+                activeSession
                   ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                   : "bg-amber-50 text-amber-800 border-amber-200"
               }`}
             >
-              {sessions.length > 0 ? `${sessions.length} Session(s)` : "No Sessions"}
+              {activeSession ? `Active Session: ${activeSession.session_label}` : "Auto-provisioning session..."}
             </span>
             <span
               className={`px-2.5 py-1 rounded text-[11px] font-bold border ${
@@ -698,18 +694,6 @@ export default function ExamManagementHubPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab("sessions")}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-            activeTab === "sessions"
-              ? "border-[#143E66] text-[#143E66] bg-white rounded-t-md"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          <span>3. Exam Sessions ({sessions.length})</span>
-          {sessions.length > 0 && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
-        </button>
-
-        <button
           onClick={() => setActiveTab("roll_admit")}
           className={`px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === "roll_admit"
@@ -718,7 +702,7 @@ export default function ExamManagementHubPage() {
           }`}
         >
           <span className="text-[#D4AF37]">★</span>
-          <span>4. Roll Numbers &amp; Admit Cards</span>
+          <span>3. Roll Numbers &amp; Admit Cards</span>
         </button>
 
         <button
@@ -733,7 +717,7 @@ export default function ExamManagementHubPage() {
           }`}
         >
           <span className="text-[#D4AF37]">★</span>
-          <span>5. Results ({resultStudents.length})</span>
+          <span>4. Results ({resultStudents.length})</span>
           {resultsReleased ? (
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
           ) : (
@@ -1098,465 +1082,161 @@ export default function ExamManagementHubPage() {
       {/* ========================================================================= */}
       {activeTab === "datesheet" && (
         <div className="space-y-6">
-          {/* Session Selector Card */}
-          <div className="bg-white rounded-lg shadow-xs border border-slate-200 p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex-1">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-[#143E66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span>Select Exam Session / परीक्षा सत्र चुनें:</span>
-                </label>
-                {sessions.length === 0 ? (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900 font-medium">
-                    No exam sessions created for <strong>{selectedCourse}</strong> yet.{" "}
-                    <button
-                      onClick={() => setActiveTab("sessions")}
-                      className="text-[#143E66] font-bold underline hover:text-[#0c2a47] cursor-pointer ml-1"
-                    >
-                      Go to Tab 3 (Exam Sessions) to create one first →
-                    </button>
-                  </div>
-                ) : (
-                  <select
-                    value={selectedDatesheetSessionId}
-                    onChange={(e) => setSelectedDatesheetSessionId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-[#143E66] focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
-                  >
-                    <option value="">-- Select an Exam Session --</option>
-                    {sessions.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.session_label} · {s.exam_year_label} {s.exam_centers ? `(${s.exam_centers.center_code})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                )}
+          {/* Active Session Info Banner */}
+          <div className="bg-white rounded-lg shadow-xs border border-slate-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+                Selected Session for Datesheet
               </div>
-
-              {activeDatesheetSession && (
-                <div className="bg-slate-50 p-3 rounded border border-slate-200 text-xs shrink-0 sm:min-w-[220px]">
-                  <div className="text-[10px] uppercase font-bold text-slate-500">Assigned Center</div>
-                  <div className="font-bold text-slate-800 mt-0.5">
-                    {activeDatesheetSession.exam_centers?.center_name || "Center Set"}
-                  </div>
-                  <div className="font-mono text-[11px] text-[#143E66]">
-                    Code: {activeDatesheetSession.exam_centers?.center_code || "—"}
-                  </div>
-                </div>
-              )}
+              <div className="text-base font-bold text-[#00031D] mt-0.5">
+                {activeSessionOption.label}
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5">
+                Course: <strong>{selectedCourse}</strong> • Exam Center:{" "}
+                <strong>{activeSession?.exam_centers?.center_name || "Assigned Center"}</strong> ({activeSession?.exam_centers?.center_code || "—"})
+              </div>
             </div>
+
+            <button
+              onClick={() => activeSession?.id && fetchDatesheet(selectedCourse, activeSession.id)}
+              disabled={loadingDatesheet || !activeSession?.id}
+              className="self-start sm:self-center px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded inline-flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <svg className={`w-3.5 h-3.5 ${loadingDatesheet ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh Datesheet
+            </button>
           </div>
 
-          {/* Prompt if no session selected */}
-          {!selectedDatesheetSessionId && sessions.length > 0 && (
-            <div className="p-8 bg-white border border-slate-200 rounded-lg text-center text-slate-500 shadow-xs">
-              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <p className="text-sm font-bold text-slate-700">Select an exam session to manage its datesheet</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Choose a session from the dropdown above to view, configure, and save subject exam dates.
-              </p>
+          {/* Status Banner */}
+          {loadingDatesheet || loadingSessions ? (
+            <div className="p-6 bg-slate-50 border border-slate-200 rounded text-slate-600 text-xs sm:text-sm flex items-center gap-3">
+              <svg className="w-5 h-5 animate-spin text-[#143E66]" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span>Loading datesheet schedule for {activeSessionOption.label}...</span>
             </div>
-          )}
-
-          {/* Prompt if no sessions exist */}
-          {sessions.length === 0 && (
-            <div className="p-8 bg-white border border-slate-200 rounded-lg text-center text-slate-500 shadow-xs">
-              <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-500 mx-auto flex items-center justify-center mb-3 border border-amber-200">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          ) : subjects.length === 0 ? (
+            <div className="p-6 bg-amber-50 border-l-4 border-amber-500 rounded-r text-amber-900 text-xs sm:text-sm">
+              <strong className="block font-bold mb-1">No subjects defined for this course!</strong>
+              Please go to <strong>Tab 1 (Subjects)</strong> and add the course subjects first before setting up the datesheet schedule.
+            </div>
+          ) : datesheetComplete ? (
+            <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r text-emerald-900 text-xs sm:text-sm flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  <strong>Datesheet Complete ✓</strong> All {datesheetSubjects.length} subjects have exam dates &amp; times assigned for this session.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r text-amber-900 text-xs sm:text-sm flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
+                <span>
+                  <strong>Datesheet Incomplete:</strong> {missingDatesheetCount} subject(s) are missing exam dates or timings for this session.
+                </span>
               </div>
-              <p className="text-sm font-bold text-slate-700">No Exam Sessions Created</p>
-              <p className="text-xs text-slate-400 mt-1">
-                This course does not have any exam sessions yet. Create a session first to set up datesheets.
-              </p>
-              <button
-                onClick={() => setActiveTab("sessions")}
-                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#143E66] hover:bg-[#0c2a47] text-white text-xs font-bold rounded cursor-pointer transition-colors shadow-sm"
-              >
-                <span>Go to Tab 3 (Exam Sessions)</span>
-                <span>→</span>
-              </button>
             </div>
           )}
 
-          {/* Datesheet Table & Status when session is selected */}
-          {selectedDatesheetSessionId && (
-            <>
-              {/* Status Banner */}
-              {datesheetSubjects.length === 0 ? (
-                <div className="p-6 bg-amber-50 border-l-4 border-amber-500 rounded-r text-amber-900 text-xs sm:text-sm">
-                  <strong className="block font-bold mb-1">No subjects defined for this course!</strong>
-                  Please go to <strong>Tab 1 (Subjects)</strong> and add the course subjects first before setting up the datesheet schedule.
+          {/* Datesheet Schedule Table */}
+          {subjects.length > 0 && (
+            <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
+              <div className="bg-[#143E66] px-5 py-3.5 text-white border-b-2 border-[#D4AF37] flex items-center justify-between">
+                <div>
+                  <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                    Datesheet Schedule / परीक्षा समय सारणी
+                  </h2>
+                  <p className="text-[11px] text-slate-300 font-medium mt-0.5">
+                    Session: {activeSessionOption.label}
+                  </p>
                 </div>
-              ) : datesheetComplete ? (
-                <div className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r text-emerald-900 text-xs sm:text-sm flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>
-                      <strong>Datesheet Complete ✓</strong> All {datesheetSubjects.length} subjects have exam dates &amp; times assigned for this session.
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r text-amber-900 text-xs sm:text-sm flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span>
-                      <strong>Datesheet Incomplete:</strong> {missingDatesheetCount} subject(s) are missing exam dates or timings for this session.
-                    </span>
-                  </div>
+              </div>
+
+              {datesheetError && (
+                <div className="p-3.5 bg-red-50 border-b border-red-200 text-red-800 text-xs font-semibold">
+                  {datesheetError}
                 </div>
               )}
 
-              {/* Datesheet Schedule Table */}
-              {datesheetSubjects.length > 0 && (
-                <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
-                  <div className="bg-[#143E66] px-5 py-3.5 text-white border-b-2 border-[#D4AF37] flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
-                        Datesheet Schedule / परीक्षा समय सारणी
-                      </h2>
-                      {activeDatesheetSession && (
-                        <p className="text-[11px] text-slate-300 font-medium mt-0.5">
-                          Session: {activeDatesheetSession.session_label} · {activeDatesheetSession.exam_year_label}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => fetchDatesheet(selectedCourse, selectedDatesheetSessionId)}
-                      disabled={loadingDatesheet}
-                      className="text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1 cursor-pointer"
-                    >
-                      <svg className={`w-3.5 h-3.5 ${loadingDatesheet ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Refresh
-                    </button>
-                  </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 uppercase text-[11px]">
+                      <th className="py-3 px-4 w-10 text-center">#</th>
+                      <th className="py-3 px-4">Subject Name</th>
+                      <th className="py-3 px-4 w-32">Subject Code</th>
+                      <th className="py-3 px-4 w-48">Exam Date (दिनांक)</th>
+                      <th className="py-3 px-4 w-48">Exam Time / Shift (समय)</th>
+                      <th className="py-3 px-4 w-32 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 text-slate-800">
+                    {displayDatesheetRows.map((s, idx) => {
+                      const formVal = datesheetFormValues[s.id] || { exam_date: "", exam_time: "" };
+                      const isSaving = savingDateRowId === s.id;
+                      const successMsg = dateRowSuccessMsg[s.id];
 
-                  {datesheetError && (
-                    <div className="p-3.5 bg-red-50 border-b border-red-200 text-red-800 text-xs font-semibold">
-                      {datesheetError}
-                    </div>
-                  )}
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 uppercase text-[11px]">
-                          <th className="py-3 px-4 w-10 text-center">#</th>
-                          <th className="py-3 px-4">Subject Name</th>
-                          <th className="py-3 px-4 w-32">Subject Code</th>
-                          <th className="py-3 px-4 w-48">Exam Date (दिनांक)</th>
-                          <th className="py-3 px-4 w-48">Exam Time / Shift (समय)</th>
-                          <th className="py-3 px-4 w-32 text-right">Action</th>
+                      return (
+                        <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-4 text-center font-bold text-slate-500">{idx + 1}</td>
+                          <td className="py-3 px-4 font-bold text-slate-900">{s.subject_name}</td>
+                          <td className="py-3 px-4 font-mono font-bold text-[#143E66]">{s.subject_code}</td>
+                          <td className="py-3 px-4">
+                            <input
+                              type="date"
+                              required
+                              value={formVal.exam_date}
+                              onChange={(e) => handleDatesheetRowChange(s.id, "exam_date", e.target.value)}
+                              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
+                            />
+                          </td>
+                          <td className="py-3 px-4">
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. 10:00 AM or Morning"
+                              value={formVal.exam_time}
+                              onChange={(e) => handleDatesheetRowChange(s.id, "exam_time", e.target.value)}
+                              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
+                            />
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {successMsg && (
+                                <span className="text-[11px] font-bold text-emerald-600 animate-fadeIn">
+                                  {successMsg}
+                                </span>
+                              )}
+                              <button
+                                onClick={() => handleSaveDatesheetRow(s.id)}
+                                disabled={isSaving}
+                                className="px-3 py-1.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded shadow-xs text-xs transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {isSaving ? "Saving..." : "Save Row"}
+                              </button>
+                            </div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 text-slate-800">
-                        {datesheetSubjects.map((s, idx) => {
-                          const formVal = datesheetFormValues[s.id] || { exam_date: "", exam_time: "" };
-                          const isSaving = savingDateRowId === s.id;
-                          const successMsg = dateRowSuccessMsg[s.id];
-
-                          return (
-                            <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
-                              <td className="py-3 px-4 text-center font-bold text-slate-500">{idx + 1}</td>
-                              <td className="py-3 px-4 font-bold text-slate-900">{s.subject_name}</td>
-                              <td className="py-3 px-4 font-mono font-bold text-[#143E66]">{s.subject_code}</td>
-                              <td className="py-3 px-4">
-                                <input
-                                  type="date"
-                                  required
-                                  value={formVal.exam_date}
-                                  onChange={(e) => handleDatesheetRowChange(s.id, "exam_date", e.target.value)}
-                                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
-                                />
-                              </td>
-                              <td className="py-3 px-4">
-                                <input
-                                  type="text"
-                                  required
-                                  placeholder="e.g. 10:00 AM or Morning"
-                                  value={formVal.exam_time}
-                                  onChange={(e) => handleDatesheetRowChange(s.id, "exam_time", e.target.value)}
-                                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
-                                />
-                              </td>
-                              <td className="py-3 px-4 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  {successMsg && (
-                                    <span className="text-[11px] font-bold text-emerald-600 animate-fadeIn">
-                                      {successMsg}
-                                    </span>
-                                  )}
-                                  <button
-                                    onClick={() => handleSaveDatesheetRow(s.id)}
-                                    disabled={isSaving}
-                                    className="px-3 py-1.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded shadow-xs text-xs transition-colors cursor-pointer disabled:opacity-50"
-                                  >
-                                    {isSaving ? "Saving..." : "Save Row"}
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB C: EXAM SESSIONS MANAGEMENT (Formerly Exam Config)                   */}
-      {/* ========================================================================= */}
-      {activeTab === "sessions" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Left 2 Cols: Existing Sessions List */}
-          <div className="lg:col-span-2 bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
-            <div className="bg-[#143E66] px-5 py-3.5 text-white border-b-2 border-[#D4AF37] flex items-center justify-between">
-              <div>
-                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
-                  Exam Sessions for {selectedCourse} ({sessions.length})
-                </h2>
-                <p className="text-[11px] text-slate-300 font-normal mt-0.5">
-                  Multiple academic batches can have distinct sessions without overwriting dates or centers.
-                </p>
-              </div>
-              <button
-                onClick={() => fetchSessions(selectedCourse)}
-                disabled={loadingSessions}
-                className="text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1 cursor-pointer shrink-0"
-              >
-                <svg className={`w-3.5 h-3.5 ${loadingSessions ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-              </button>
-            </div>
 
-            {loadingSessions ? (
-              <div className="p-12 text-center text-slate-500">
-                <svg className="w-8 h-8 animate-spin mx-auto text-[#143E66] mb-2" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <p className="text-xs font-semibold">Loading exam sessions...</p>
-              </div>
-            ) : sessions.length === 0 ? (
-              <div className="p-10 text-center text-slate-500">
-                <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <p className="text-sm font-bold text-slate-700">No exam sessions yet for this course</p>
-                <p className="text-xs text-slate-400 mt-1">Add one using the form on the right to get started.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-200">
-                {sessions.map((s, idx) => {
-                  const isEditingThis = editingSession?.id === s.id;
-                  return (
-                    <div
-                      key={s.id}
-                      className={`p-5 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                        isEditingThis ? "bg-amber-50/70 border-l-4 border-[#D4AF37]" : "hover:bg-slate-50/60"
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono font-bold text-slate-400">#{idx + 1}</span>
-                          <span className="text-sm font-bold text-[#00031D]">{s.session_label}</span>
-                          <span className="px-2 py-0.5 bg-blue-50 text-[#143E66] border border-blue-200 rounded text-[11px] font-bold">
-                            {s.exam_year_label}
-                          </span>
-                          {isEditingThis && (
-                            <span className="px-2 py-0.5 bg-amber-100 text-amber-900 rounded text-[10px] font-bold">
-                              Editing Now
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-slate-600">
-                          <div className="flex items-center gap-1 font-medium">
-                            <span className="text-slate-400">Exam Center:</span>
-                            <span className="font-semibold text-slate-800">
-                              {s.exam_centers?.center_name || "—"}
-                            </span>
-                            {s.exam_centers?.center_code && (
-                              <span className="font-mono text-[#143E66] font-bold">
-                                ({s.exam_centers.center_code})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => handleStartEditSession(s)}
-                          className="px-3.5 py-1.5 bg-slate-100 hover:bg-[#143E66] hover:text-white text-[#143E66] text-xs font-bold rounded border border-slate-300 transition-colors cursor-pointer"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Right 1 Col: Add / Edit Session Form */}
-          <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
-            <div className="bg-[#00031D] px-5 py-3.5 text-white border-b-2 border-[#D4AF37] flex items-center justify-between">
-              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                <svg className="w-4 h-4 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                </svg>
-                <span>{editingSession ? "Edit Exam Session" : "+ Add New Session"}</span>
-              </h2>
-              {editingSession && (
-                <button
-                  type="button"
-                  onClick={handleCancelEditSession}
-                  className="text-xs text-slate-300 hover:text-white underline cursor-pointer"
-                >
-                  Cancel Edit
-                </button>
-              )}
-            </div>
-
-            <form onSubmit={handleSaveSession} className="p-5 space-y-4">
-              {sessionSuccessMsg && (
-                <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded text-xs font-semibold">
-                  {sessionSuccessMsg}
-                </div>
-              )}
-              {sessionErrorMsg && (
-                <div className="p-3 bg-red-50 border border-red-300 text-red-800 rounded text-xs font-semibold">
-                  {sessionErrorMsg}
-                </div>
-              )}
-
-              {/* Warning if no centers exist */}
-              {centers.length === 0 && !loadingCenters && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800">
-                  <strong>No exam centers found!</strong> You must create at least one exam center before adding a session.
-                  <div className="mt-1">
-                    <Link
-                      href="/admin/dashboard/exam-management/centers"
-                      className="font-bold text-red-900 underline"
-                    >
-                      → Manage Exam Centers
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Session Label / सत्र विवरण <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={sessionLabel}
-                  onChange={(e) => setSessionLabel(e.target.value)}
-                  placeholder="e.g. Mar 2023 - Apr 2024"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
-                />
-                <p className="text-[10.5px] text-slate-400 mt-1">
-                  Printed on admit card banner (e.g. &quot;SESSION MAR 2023 - APR 2024&quot;).
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Exam Year Label / परीक्षा वर्ष <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={examYearLabel}
-                  onChange={(e) => setExamYearLabel(e.target.value)}
-                  placeholder="e.g. 2024 (1st Year) or 2024"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
-                />
-                <p className="text-[10.5px] text-slate-400 mt-1">
-                  Must include 4-digit year used for roll numbers (e.g. 2024 → &quot;24&quot; suffix).
-                </p>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Assigned Exam Center <span className="text-red-500">*</span>
-                  </label>
-                  <Link
-                    href="/admin/dashboard/exam-management/centers"
-                    className="text-[11px] font-semibold text-[#143E66] hover:underline"
-                  >
-                    + Add Center
-                  </Link>
-                </div>
-                <select
-                  required
-                  value={examCenterId}
-                  onChange={(e) => setExamCenterId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
-                >
-                  <option value="">-- Select Examination Center --</option>
-                  {centers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.center_name} ({c.center_code}) {c.city ? `• ${c.city}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pt-2 flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={savingSession || centers.length === 0}
-                  className="flex-1 py-2.5 px-4 bg-[#143E66] hover:bg-[#0c2a47] active:bg-[#081f34] text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {savingSession
-                    ? editingSession
-                      ? "Saving..."
-                      : "Adding..."
-                    : editingSession
-                    ? "Update Exam Session"
-                    : "Add Session to Course"}
-                </button>
-                {editingSession && (
-                  <button
-                    type="button"
-                    onClick={handleCancelEditSession}
-                    className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* TAB D: ROLL NUMBERS & ADMIT CARDS                                         */}
@@ -1575,16 +1255,16 @@ export default function ExamManagementHubPage() {
                 <div className="flex items-center gap-2 font-bold text-xs uppercase mb-1">
                   <span>{subjects.length > 0 ? "✓ 1. Subjects Configured" : "✕ 1. Missing Subjects"}</span>
                 </div>
-                <p className="text-[11.5px] opacity-90">{subjects.length} subject(s) added to this course.</p>
+                <p className="text-[11.5px] opacity-90">{subjects.length} subject(s) defined for this course.</p>
               </div>
 
               {/* Check 2 */}
-              <div className={`p-4 rounded-lg border ${sessions.length > 0 ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-red-50 border-red-200 text-red-900"}`}>
+              <div className={`p-4 rounded-lg border ${activeSession ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-red-50 border-red-200 text-red-900"}`}>
                 <div className="flex items-center gap-2 font-bold text-xs uppercase mb-1">
-                  <span>{sessions.length > 0 ? `✓ 2. Exam Sessions (${sessions.length})` : "✕ 2. Missing Exam Sessions"}</span>
+                  <span>{activeSession ? "✓ 2. Session Active" : "✕ 2. Session Pending"}</span>
                 </div>
                 <p className="text-[11.5px] opacity-90">
-                  {sessions.length > 0 ? `${sessions.length} session(s) configured.` : "No session configured for this course."}
+                  {activeSession ? `${activeSessionOption.label} configured.` : "Setting up session..."}
                 </p>
               </div>
 
@@ -1594,52 +1274,44 @@ export default function ExamManagementHubPage() {
                   <span>{datesheetComplete ? "✓ 3. Datesheet Ready" : "⚠ 3. Datesheet Pending"}</span>
                 </div>
                 <p className="text-[11.5px] opacity-90">
-                  {datesheetComplete ? "Active session datesheet complete." : "Configure datesheet before issuing cards."}
+                  {datesheetComplete ? "Datesheet complete for this session." : "Configure datesheet before issuing cards."}
                 </p>
               </div>
             </div>
+
+            {/* 2nd Year Prerequisite Notice Banner */}
+            {activeSessionOption.year_number === 2 && (
+              <div className="p-3.5 bg-blue-50 border-l-4 border-blue-500 rounded-r text-blue-950 text-xs flex items-center gap-2 mb-4">
+                <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  <strong>2nd Year Prerequisite Active:</strong> Only candidates who have successfully <strong>PASSED 1st Year examinations</strong> are eligible for 2nd Year Roll Number allotment and Admit Card generation.
+                </span>
+              </div>
+            )}
 
             {/* Action 1: Roll Number Allotment */}
             <div className="pt-5 border-t border-slate-200 space-y-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-800">
-                  Step 1: Allot Roll Numbers to Approved Students by Session
+                  Step 1: Allot Roll Numbers to Approved Candidates in {activeSessionOption.label}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Generates sequential roll numbers for approved candidates using the selected session&apos;s exam center code and year suffix. Safe to run multiple times.
+                  Generates sequential roll numbers for approved candidates belonging to this course &amp; session using center code &apos;{activeSession?.exam_centers?.center_code || "—"}&apos; and year suffix &apos;{activeSessionOption.exam_year_label.slice(-2)}&apos;. Safe to run multiple times.
                 </p>
               </div>
 
-              {/* Session Selector for Allotment */}
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Select Target Exam Session / लक्षित परीक्षा सत्र:
-                  </label>
-                  {sessions.length === 0 ? (
-                    <p className="text-xs text-amber-800 font-semibold">
-                      No exam sessions exist for this course yet. Please create one in Tab 3 (Exam Sessions).
-                    </p>
-                  ) : (
-                    <select
-                      value={selectedAllotSessionId}
-                      onChange={(e) => setSelectedAllotSessionId(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded text-xs sm:text-sm font-bold text-[#143E66] focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
-                    >
-                      <option value="">-- Select an Exam Session --</option>
-                      {sessions.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.session_label} · {s.exam_year_label} {s.exam_centers ? `(${s.exam_centers.center_code})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                <div className="text-xs">
+                  <span className="font-bold text-slate-700 uppercase tracking-wider block mb-1">Target Batch:</span>
+                  <span className="font-bold text-[#143E66] text-sm">{activeSessionOption.label}</span>
                 </div>
 
                 <div className="shrink-0">
                   <button
                     onClick={handleAllotRollNumbers}
-                    disabled={allottingRolls || !selectedAllotSessionId}
+                    disabled={allottingRolls || !activeSession?.id}
                     className="w-full sm:w-auto px-5 py-2.5 bg-[#143E66] hover:bg-[#0c2a47] active:bg-[#081f34] text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {allottingRolls ? (
@@ -1667,6 +1339,41 @@ export default function ExamManagementHubPage() {
                   {allotResultMsg}
                 </div>
               )}
+              {allottedResults.length > 0 && (
+                <div className="p-4 bg-emerald-50/70 border border-emerald-300 rounded-lg">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Allotted Roll Numbers List ({allottedResults.length})</span>
+                    </h4>
+                    <span className="text-[11px] font-semibold text-emerald-800">
+                      Sequential Roll Numbers Generated
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto max-h-60 overflow-y-auto border border-emerald-200 rounded bg-white">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-emerald-100/60 text-emerald-900 font-bold uppercase text-[10.5px]">
+                        <tr>
+                          <th className="py-2 px-3 w-12 text-center">#</th>
+                          <th className="py-2 px-3">Student Registration ID</th>
+                          <th className="py-2 px-3">Assigned Roll Number</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-emerald-100 text-slate-800">
+                        {allottedResults.map((item, idx) => (
+                          <tr key={item.id} className="hover:bg-emerald-50/40 transition-colors">
+                            <td className="py-2 px-3 text-center font-bold text-slate-500">{idx + 1}</td>
+                            <td className="py-2 px-3 font-mono text-slate-700">{item.id}</td>
+                            <td className="py-2 px-3 font-mono font-bold text-[#143E66]">{item.roll_no}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
               {allotError && (
                 <div className="text-xs font-bold text-red-700 bg-red-50 px-3.5 py-2 rounded border border-red-200">
                   {allotError}
@@ -1681,13 +1388,13 @@ export default function ExamManagementHubPage() {
                   Step 2: Generate &amp; Print Bulk Admit Cards
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Opens the printable bulk admit cards page for all approved and configured candidates in this course.
+                  Opens printable admit cards for all approved candidates in this course &amp; session.
                 </p>
               </div>
 
               <Link
-                href={`/admin/dashboard/admit-cards/bulk?course_name=${encodeURIComponent(selectedCourse)}`}
-                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all flex items-center gap-2 shrink-0"
+                href={`/admin/dashboard/admit-cards/bulk?course_name=${encodeURIComponent(selectedCourse)}&academic_session=${encodeURIComponent(activeSessionOption.academic_session)}&session_label=${encodeURIComponent(activeSessionOption.session_label)}&year_number=${activeSessionOption.year_number}`}
+                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <svg className="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -1714,7 +1421,14 @@ export default function ExamManagementHubPage() {
               </p>
             </div>
             <button
-              onClick={() => fetchResults(selectedCourse)}
+              onClick={() =>
+                fetchResults(
+                  selectedCourse,
+                  activeSessionOption.academic_session,
+                  activeSessionOption.session_label,
+                  activeSessionOption.year_number
+                )
+              }
               disabled={loadingResults}
               className="text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1 shrink-0 cursor-pointer"
             >
@@ -1764,30 +1478,56 @@ export default function ExamManagementHubPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 text-slate-800">
-                  {resultStudents.map((s, idx) => (
-                    <tr
-                      key={s.id}
-                      onClick={() => router.push(`/admin/dashboard/exam-management/results/${s.id}`)}
-                      className="hover:bg-amber-50/50 transition-colors cursor-pointer group"
-                    >
-                      <td className="py-3 px-4 text-center font-bold text-slate-500">{idx + 1}</td>
-                      <td className="py-3 px-4 font-mono font-bold text-[#143E66]">{s.roll_no || "—"}</td>
-                      <td className="py-3 px-4 font-mono text-slate-700">{s.registration_no}</td>
-                      <td className="py-3 px-4 font-bold text-slate-900 group-hover:text-[#143E66]">
-                        {s.candidate_name}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Link
-                          href={`/admin/dashboard/exam-management/results/${s.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded shadow-xs text-xs transition-colors"
-                        >
-                          <span>Enter / View Marks</span>
-                          <span>→</span>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                  {resultStudents.map((s, idx) => {
+                    const isLocked = activeSessionOption.year_number === 2 && s.first_year_passed === false;
+
+                    return (
+                      <tr
+                        key={s.id}
+                        onClick={() => {
+                          if (!isLocked) {
+                            router.push(`/admin/dashboard/exam-management/results/${s.id}`);
+                          }
+                        }}
+                        className={`transition-colors ${
+                          isLocked ? "bg-slate-50 opacity-75 cursor-not-allowed" : "hover:bg-amber-50/50 cursor-pointer group"
+                        }`}
+                      >
+                        <td className="py-3 px-4 text-center font-bold text-slate-500">{idx + 1}</td>
+                        <td className="py-3 px-4 font-mono font-bold text-[#143E66]">{s.roll_no || "—"}</td>
+                        <td className="py-3 px-4 font-mono text-slate-700">{s.registration_no}</td>
+                        <td className="py-3 px-4 font-bold text-slate-900 group-hover:text-[#143E66]">
+                          <div className="flex items-center gap-2">
+                            <span>{s.candidate_name}</span>
+                            {isLocked && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-[10px] font-bold">
+                                1st Year Pending / Not Passed
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {isLocked ? (
+                            <span
+                              title={s.first_year_reason || "1st Year result not cleared"}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 text-slate-500 font-bold rounded text-xs cursor-not-allowed"
+                            >
+                              <span>🔒 Locked (1st Year Incomplete)</span>
+                            </span>
+                          ) : (
+                            <Link
+                              href={`/admin/dashboard/exam-management/results/${s.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded shadow-xs text-xs transition-colors"
+                            >
+                              <span>Enter / View Marks</span>
+                              <span>→</span>
+                            </Link>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -33,7 +33,7 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select(
-      "registration_no, roll_no, candidate_name, father_name, dob, course, photo_url, status, admit_card_generated_at, exam_session_id"
+      "registration_no, roll_no, candidate_name, father_name, dob, course, photo_url, status, admit_card_generated_at, exam_session_id, college_id, colleges(college_name, username)"
     )
     .eq("id", registrationId)
     .single();
@@ -56,7 +56,7 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
 
   const { data: session, error: sessionError } = await supabaseAdmin
     .from("exam_sessions")
-    .select("session_label, exam_year_label, exam_centers(center_name, center_code, address, city)")
+    .select("session_label, exam_year_label")
     .eq("id", reg.exam_session_id)
     .single();
 
@@ -64,16 +64,13 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
     return { data: null, error: "Exam session details are missing" };
   }
 
-  const center = session.exam_centers as unknown as {
-    center_name: string;
-    center_code: string;
-    address: string | null;
-    city: string | null;
+  const college = reg.colleges as unknown as {
+    college_name?: string;
+    username?: string;
   } | null;
 
-  if (!center) {
-    return { data: null, error: "Exam center details are missing for this session" };
-  }
+  const centerName = college?.college_name || "Self Examination Center (Affiliated Institute)";
+  const centerCode = college?.username?.toUpperCase() || "IPBI";
 
   const { data: subjectRows, error: subjectError } = await supabaseAdmin
     .from("course_subjects")
@@ -146,10 +143,10 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
       photo_url: reg.photo_url,
       session_label: session.session_label,
       exam_year_label: session.exam_year_label,
-      center_name: center.center_name,
-      center_code: center.center_code,
-      center_address: center.address,
-      center_city: center.city,
+      center_name: centerName,
+      center_code: centerCode,
+      center_address: null,
+      center_city: null,
       subjects,
     },
     error: null,

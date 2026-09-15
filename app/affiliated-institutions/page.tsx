@@ -36,7 +36,7 @@ export const AFFILIATED_INSTITUTIONS_DATA: AffiliatedInstitution[] = [
       "Operation Theatre Technology (COTT)",
       "ECG Technician (CECG)",
       "General Duty Assistant (CGDA)",
-      "Community Medical Services (CMS & ED)",
+      "Community Medical Services & Essential Drugs (CMS & ED)",
       "First Aid & Nursing (CFAN)",
     ],
     contactPerson: "Centre Administrator",
