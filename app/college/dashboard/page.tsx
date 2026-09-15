@@ -30,7 +30,7 @@ export default async function CollegeDashboardHomePage() {
           <div>
             <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full mb-2 border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Portal Active • Session 2026-2027
+              Portal Active
             </div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#00031D] tracking-tight">
               Welcome, {collegeName}
@@ -122,7 +122,7 @@ export default async function CollegeDashboardHomePage() {
                   नया छात्र पंजीकरण फॉर्म भरें
                 </p>
                 <p className="text-xs text-white/80 leading-relaxed">
-                  Enroll a student into Paramedical Diploma & Certificate programs for the 2026-2027 academic session.
+                  Enroll a student into Paramedical Diploma & Certificate programs.
                 </p>
               </div>
 

@@ -17,11 +17,36 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "course_name and session_id are both required" }, { status: 400 });
   }
 
-  const { data: subjectRows, error: subjectError } = await supabaseAdmin
+  // Determine year_number from session
+  let yearNumber = 1;
+  const { data: sessionData } = await supabaseAdmin
+    .from("exam_sessions")
+    .select("session_label, academic_session")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (sessionData?.session_label?.includes("2nd Year")) {
+    yearNumber = 2;
+  }
+
+  let { data: subjectRows, error: subjectError } = await supabaseAdmin
     .from("course_subjects")
     .select("id, subject_name, subject_code")
     .eq("course_name", courseName)
+    .eq("year_number", yearNumber)
     .order("created_at", { ascending: true });
+
+  // Fallback if year_number column not present
+  if (subjectError && subjectError.message?.includes("year_number")) {
+    const fallback = await supabaseAdmin
+      .from("course_subjects")
+      .select("id, subject_name, subject_code")
+      .eq("course_name", courseName)
+      .order("created_at", { ascending: true });
+
+    subjectRows = fallback.data;
+    subjectError = fallback.error;
+  }
 
   if (subjectError) {
     return NextResponse.json({ error: subjectError.message }, { status: 500 });
@@ -64,6 +89,59 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
+
+  // Bulk entries format: { exam_session_id, entries: [...] } or array
+  if (Array.isArray(body.entries) || Array.isArray(body)) {
+    const entries: Array<{ subject_id: string; exam_session_id?: string; exam_date: string; exam_time: string }> =
+      Array.isArray(body.entries) ? body.entries : body;
+    const defaultSessionId = body.exam_session_id;
+
+    if (entries.length === 0) {
+      return NextResponse.json({ error: "No datesheet entries provided" }, { status: 400 });
+    }
+
+    const validEntries = entries.filter((e) => {
+      const sessId = e.exam_session_id || defaultSessionId;
+      return e.subject_id && sessId && e.exam_date && e.exam_time;
+    });
+
+    if (validEntries.length === 0) {
+      return NextResponse.json({ error: "No valid datesheet entries found to save" }, { status: 400 });
+    }
+
+    const subjectIds = Array.from(new Set(validEntries.map((e) => e.subject_id)));
+    const { data: subjectRows, error: subjectError } = await supabaseAdmin
+      .from("course_subjects")
+      .select("id, course_name")
+      .in("id", subjectIds);
+
+    if (subjectError) {
+      return NextResponse.json({ error: subjectError.message }, { status: 500 });
+    }
+
+    const subjectMap = new Map((subjectRows || []).map((s) => [s.id, s.course_name]));
+
+    const upsertPayload = validEntries.map((e) => ({
+      subject_id: e.subject_id,
+      exam_session_id: e.exam_session_id || defaultSessionId,
+      course_name: subjectMap.get(e.subject_id) || "",
+      exam_date: e.exam_date,
+      exam_time: e.exam_time,
+    }));
+
+    const { data, error } = await supabaseAdmin
+      .from("datesheets")
+      .upsert(upsertPayload, { onConflict: "subject_id,exam_session_id" })
+      .select();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ datesheets: data, count: data?.length || 0 }, { status: 200 });
+  }
+
+  // Single entry format
   const { subject_id, exam_session_id, exam_date, exam_time } = body;
 
   if (!subject_id || !exam_session_id || !exam_date || !exam_time) {

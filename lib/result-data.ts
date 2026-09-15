@@ -96,11 +96,25 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
   const centerName = college?.college_name || "Self Examination Center (Affiliated Institute)";
   const centerCode = college?.username?.toUpperCase() || "IPBI";
 
-  const { data: subjectRows, error: subjectError } = await supabaseAdmin
+  const yearNumber = session.session_label?.includes("2nd Year") ? 2 : 1;
+
+  let { data: subjectRows, error: subjectError } = await supabaseAdmin
     .from("course_subjects")
     .select("id, subject_name, subject_code, theory_max, practical_max, ca_max")
     .eq("course_name", reg.course)
+    .eq("year_number", yearNumber)
     .order("created_at", { ascending: true });
+
+  if (subjectError && subjectError.message?.includes("year_number")) {
+    const fallback = await supabaseAdmin
+      .from("course_subjects")
+      .select("id, subject_name, subject_code, theory_max, practical_max, ca_max")
+      .eq("course_name", reg.course)
+      .order("created_at", { ascending: true });
+
+    subjectRows = fallback.data;
+    subjectError = fallback.error;
+  }
 
   if (subjectError) {
     return { data: null, error: subjectError.message };
@@ -245,13 +259,19 @@ export async function upsertSubjectMarks(
   return { error: null };
 }
 
-export async function isCourseResultsReleased(courseName: string): Promise<boolean> {
-  const { data: registrations, error } = await supabaseAdmin
+export async function isCourseResultsReleased(courseName: string, sessionId?: string): Promise<boolean> {
+  let query = supabaseAdmin
     .from("student_registrations")
     .select("id")
     .eq("course", courseName)
     .eq("status", "approved")
     .not("admit_card_generated_at", "is", null);
+
+  if (sessionId) {
+    query = query.eq("exam_session_id", sessionId);
+  }
+
+  const { data: registrations, error } = await query;
 
   if (error || !registrations || registrations.length === 0) {
     return false;

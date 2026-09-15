@@ -35,39 +35,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Assigned exam center has no center_code set" }, { status: 400 });
   }
 
-  const yearMatch = session.exam_year_label.match(/\d{4}/);
-  if (!yearMatch) {
-    return NextResponse.json({ error: "Could not extract a 4-digit year from exam_year_label" }, { status: 400 });
-  }
-  const yearSuffix = yearMatch[0].slice(-2);
-  const prefix = `${centerCode}${yearSuffix}`;
-
-  const { data: existing, error: existingError } = await supabaseAdmin
-    .from("student_registrations")
-    .select("roll_no")
-    .like("roll_no", `${prefix}%`)
-    .order("roll_no", { ascending: false })
-    .limit(1);
-
-  if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 500 });
-  }
-
-  let nextSeq = 1;
-  if (existing.length > 0) {
-    const lastSeqStr = existing[0].roll_no.slice(prefix.length);
-    const lastSeq = parseInt(lastSeqStr, 10);
-    if (!isNaN(lastSeq)) {
-      nextSeq = lastSeq + 1;
-    }
-  }
-
   const targetAcademicSession =
     academic_session || getBatchAcademicSessionFromSessionLabel(session.session_label);
 
+  const sessionStr = targetAcademicSession || session.session_label || session.exam_year_label || "2023-2024";
+  const fullMatch = sessionStr.match(/(\d{4})[^\d]*(\d{2,4})/);
+  let sessionDigits = "202324";
+  if (fullMatch) {
+    const y1 = fullMatch[1];
+    const y2 = fullMatch[2].slice(-2);
+    sessionDigits = `${y1}${y2}`;
+  } else {
+    const singleMatch = sessionStr.match(/\d{4}/);
+    if (singleMatch) {
+      const y1 = singleMatch[0];
+      const y2 = String((parseInt(y1.slice(-2), 10) + 1) % 100).padStart(2, "0");
+      sessionDigits = `${y1}${y2}`;
+    }
+  }
+
   let query = supabaseAdmin
     .from("student_registrations")
-    .select("id, candidate_name, registration_no")
+    .select("id, candidate_name, registration_no, college_id, colleges(username, college_code, college_name)")
     .eq("course", session.course_name)
     .eq("status", "approved")
     .is("roll_no", null)
@@ -117,9 +106,43 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Sequence cache per prefix so multiple students in the same batch get sequential numbers
+  const seqMap = new Map<string, number>();
+
+  const getNextSeqForPrefix = async (pref: string) => {
+    if (seqMap.has(pref)) {
+      const next = seqMap.get(pref)! + 1;
+      seqMap.set(pref, next);
+      return next;
+    }
+    const { data: existing } = await supabaseAdmin
+      .from("student_registrations")
+      .select("roll_no")
+      .like("roll_no", `${pref}%`)
+      .order("roll_no", { ascending: false })
+      .limit(1);
+
+    let start = 1;
+    if (existing && existing.length > 0 && existing[0].roll_no) {
+      const lastSeqStr = existing[0].roll_no.slice(pref.length);
+      const lastSeq = parseInt(lastSeqStr, 10);
+      if (!isNaN(lastSeq)) {
+        start = lastSeq + 1;
+      }
+    }
+    seqMap.set(pref, start);
+    return start;
+  };
+
   const results = [];
   for (const student of eligibleStudents) {
-    const rollNo = `${prefix}${String(nextSeq).padStart(4, "0")}`;
+    const college = student.colleges as unknown as { username?: string; college_code?: string } | null;
+    const studentCode = college?.username ? college.username.toUpperCase() : (centerCode || "IPBI");
+    const prefix = `${studentCode}${sessionDigits}`;
+
+    const seq = await getNextSeqForPrefix(prefix);
+    const rollNo = `${prefix}${String(seq).padStart(2, "0")}`;
+
     const { data: updated, error: updateError } = await supabaseAdmin
       .from("student_registrations")
       .update({ roll_no: rollNo, exam_session_id: session_id })
@@ -132,7 +155,6 @@ export async function POST(req: NextRequest) {
     }
 
     results.push(updated);
-    nextSeq++;
   }
 
   return NextResponse.json({ allotted: results.length, results });

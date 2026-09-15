@@ -14,7 +14,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from("colleges")
-    .select("id, college_name, username, is_active, created_at")
+    .select("id, college_name, username, is_active, created_at, college_code")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
   const college_name = (body.college_name || "").trim();
   const username = (body.username || "").trim();
   const password = body.password || "";
+  let college_code = (body.college_code || "").trim();
 
   if (!college_name || !username || !password) {
     return NextResponse.json(
@@ -60,12 +61,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Username already taken" }, { status: 409 });
   }
 
+  if (!college_code) {
+    const { data: allColleges } = await supabaseAdmin
+      .from("colleges")
+      .select("college_code");
+
+    let maxNum = 0;
+    (allColleges || []).forEach((c) => {
+      const n = parseInt(c.college_code, 10);
+      if (!isNaN(n) && n > maxNum) maxNum = n;
+    });
+    college_code = String(maxNum + 1).padStart(2, "0");
+  } else {
+    const { data: existingCode } = await supabaseAdmin
+      .from("colleges")
+      .select("id")
+      .eq("college_code", college_code)
+      .maybeSingle();
+
+    if (existingCode) {
+      return NextResponse.json({ error: `College Code "${college_code}" is already in use` }, { status: 409 });
+    }
+  }
+
   const password_hash = await bcrypt.hash(password, 10);
 
   const { data, error } = await supabaseAdmin
     .from("colleges")
-    .insert({ college_name, username, password_hash, is_active: true })
-    .select("id, college_name, username, is_active, created_at")
+    .insert({ college_name, username, password_hash, college_code, is_active: true })
+    .select("id, college_name, username, is_active, created_at, college_code")
     .single();
 
   if (error) {

@@ -35,7 +35,7 @@ export default function DashboardStudentRegisterPage() {
                 Student Online Registration / छात्र ऑनलाइन पंजीकरण
               </h1>
               <p className="text-xs sm:text-sm text-[#C2DCED] mt-0.5 font-medium">
-                Academic Session 2026-2027 • Candidate Enrollment Portal
+                Candidate Enrollment Portal
               </p>
             </div>
 

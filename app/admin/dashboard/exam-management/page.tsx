@@ -18,6 +18,7 @@ interface SubjectItem {
   theory_max?: number | null;
   practical_max?: number | null;
   ca_max?: number | null;
+  year_number?: number;
   created_at?: string;
 }
 
@@ -65,6 +66,71 @@ export default function ExamManagementHubPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>(PARAMEDICAL_COURSES[0]);
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"subjects" | "datesheet" | "roll_admit" | "results">("subjects");
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize state from URL query parameters or sessionStorage on client mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const sp = new URLSearchParams(window.location.search);
+    let tabParam = sp.get("tab");
+    let courseParam = sp.get("course");
+    let sessionParam = sp.get("session");
+
+    if (!tabParam && !courseParam && !sessionParam) {
+      try {
+        const saved = sessionStorage.getItem("exam_hub_state");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          tabParam = parsed.tab;
+          courseParam = parsed.course;
+          sessionParam = parsed.session;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (courseParam && PARAMEDICAL_COURSES.includes(courseParam)) {
+      setSelectedCourse(courseParam);
+    }
+    if (
+      tabParam &&
+      ["subjects", "datesheet", "roll_admit", "results"].includes(tabParam)
+    ) {
+      setActiveTab(tabParam as "subjects" | "datesheet" | "roll_admit" | "results");
+    }
+    if (sessionParam) {
+      setSelectedSessionKey(sessionParam);
+    }
+    setIsInitialized(true);
+  }, []);
+
+  // Whenever activeTab, selectedCourse, or selectedSessionKey changes, keep URL & sessionStorage in sync
+  useEffect(() => {
+    if (typeof window === "undefined" || !isInitialized) return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", activeTab);
+    url.searchParams.set("course", selectedCourse);
+    if (selectedSessionKey) {
+      url.searchParams.set("session", selectedSessionKey);
+    }
+    window.history.replaceState(null, "", url.toString());
+
+    try {
+      sessionStorage.setItem(
+        "exam_hub_state",
+        JSON.stringify({
+          tab: activeTab,
+          course: selectedCourse,
+          session: selectedSessionKey,
+        })
+      );
+    } catch (e) {
+      // ignore
+    }
+  }, [activeTab, selectedCourse, selectedSessionKey, isInitialized]);
 
   // Dynamic Session Options based on course duration
   const sessionOptions = useMemo(() => {
@@ -109,7 +175,12 @@ export default function ExamManagementHubPage() {
     Record<string, { exam_date: string; exam_time: string }>
   >({});
   const [savingDateRowId, setSavingDateRowId] = useState<string | null>(null);
+  const [savingAllDates, setSavingAllDates] = useState(false);
   const [dateRowSuccessMsg, setDateRowSuccessMsg] = useState<Record<string, string>>({});
+  const [bulkSuccessMsg, setBulkSuccessMsg] = useState<string | null>(null);
+  const [bulkShiftVal, setBulkShiftVal] = useState("Morning (10:00 AM - 01:00 PM)");
+  const [bulkStartDate, setBulkStartDate] = useState("");
+  const [bulkGapDays, setBulkGapDays] = useState("1");
 
   // Tab C (previously D): Roll Numbers & Admit Cards State
   const [allottingRolls, setAllottingRolls] = useState(false);
@@ -123,12 +194,161 @@ export default function ExamManagementHubPage() {
   const [loadingResults, setLoadingResults] = useState(false);
   const [resultsError, setResultsError] = useState<string | null>(null);
 
-  // Fetch Tab A: Subjects
-  const fetchSubjects = async (course: string) => {
+  const fetchRequestIdRef = React.useRef(0);
+
+  // Sync all tab data for a course and session option
+  const syncAllData = useCallback(
+    async (course: string, targetSessionOpt: CourseSessionOption) => {
+      const fetchId = ++fetchRequestIdRef.current;
+
+      setLoadingSubjects(true);
+      setLoadingSessions(true);
+      setLoadingDatesheet(true);
+      setLoadingResults(true);
+      setSubjectError(null);
+      setDatesheetError(null);
+      setResultsError(null);
+
+      try {
+        // 1. Fetch Subjects & Sessions in parallel (subjects scoped to year_number)
+        const yearParam = targetSessionOpt.year_number || 1;
+        const subjPromise = fetch(
+          `/api/admin/subjects?course_name=${encodeURIComponent(course)}&year_number=${encodeURIComponent(String(yearParam))}`
+        )
+          .then((r) => r.json())
+          .catch(() => ({ subjects: [] }));
+
+        const sessPromise = fetch(`/api/admin/exam-sessions?course_name=${encodeURIComponent(course)}`)
+          .then((r) => r.json())
+          .catch(() => ({ sessions: [] }));
+
+        const [subjData, sessData] = await Promise.all([subjPromise, sessPromise]);
+
+        if (fetchId !== fetchRequestIdRef.current) return;
+
+        const subjectList: SubjectItem[] = subjData.subjects || [];
+        setSubjects(subjectList);
+        setLoadingSubjects(false);
+
+        const sessionList: ExamSession[] = sessData.sessions || [];
+        setSessions(sessionList);
+
+        let matched = sessionList.find((s) => s.session_label === targetSessionOpt.session_label);
+
+        // Auto-provision session if missing
+        if (!matched && targetSessionOpt.session_label) {
+          try {
+            const createRes = await fetch("/api/admin/exam-sessions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                course_name: course,
+                session_label: targetSessionOpt.session_label,
+                exam_year_label: targetSessionOpt.exam_year_label,
+                academic_session: targetSessionOpt.academic_session,
+              }),
+            });
+            const createData = await createRes.json();
+            if (createRes.ok && createData.session) {
+              matched = createData.session;
+              setSessions((prev) => [matched!, ...prev]);
+            }
+          } catch (autoErr) {
+            console.error("Auto provision session error:", autoErr);
+          }
+        }
+
+        if (fetchId !== fetchRequestIdRef.current) return;
+        setActiveSession(matched || null);
+        setLoadingSessions(false);
+
+        if (matched?.id) {
+          // 2. Fetch Datesheet & Results for this matched session
+          const datesheetPromise = fetch(
+            `/api/admin/datesheets?course_name=${encodeURIComponent(course)}&session_id=${encodeURIComponent(matched.id)}`
+          )
+            .then((r) => r.json())
+            .catch(() => ({ subjects: [], complete: false }));
+
+          const resultsUrl = `/api/admin/results?course_name=${encodeURIComponent(course)}&session_label=${encodeURIComponent(targetSessionOpt.session_label)}&academic_session=${encodeURIComponent(targetSessionOpt.academic_session)}&year_number=${targetSessionOpt.year_number}&session_id=${encodeURIComponent(matched.id)}`;
+          const resultsPromise = fetch(resultsUrl)
+            .then((r) => r.json())
+            .catch(() => ({ students: [], released: false }));
+
+          const [dsData, resData] = await Promise.all([datesheetPromise, resultsPromise]);
+
+          if (fetchId !== fetchRequestIdRef.current) return;
+
+          const dsList: DatesheetSubjectItem[] = dsData.subjects || [];
+          setDatesheetSubjects(dsList);
+          setDatesheetComplete(dsData.complete ?? false);
+
+          setDatesheetFormValues((prev) => {
+            const nextMap: Record<string, { exam_date: string; exam_time: string }> = { ...prev };
+            dsList.forEach((s) => {
+              nextMap[s.id] = {
+                exam_date: s.exam_date || prev[s.id]?.exam_date || "",
+                exam_time: s.exam_time || prev[s.id]?.exam_time || "Morning (10:00 AM - 01:00 PM)",
+              };
+            });
+            return nextMap;
+          });
+
+          setResultStudents(resData.students || []);
+          setResultsReleased(resData.released ?? false);
+        } else {
+          setDatesheetSubjects([]);
+          setDatesheetComplete(false);
+          setResultStudents([]);
+          setResultsReleased(false);
+        }
+      } catch (err) {
+        console.error("syncAllData error:", err);
+      } finally {
+        if (fetchId === fetchRequestIdRef.current) {
+          setLoadingSubjects(false);
+          setLoadingSessions(false);
+          setLoadingDatesheet(false);
+          setLoadingResults(false);
+        }
+      }
+    },
+    []
+  );
+
+  // Sync data whenever isInitialized is true and course/session changes
+  useEffect(() => {
+    if (!isInitialized) return;
+    syncAllData(selectedCourse, activeSessionOption);
+  }, [isInitialized, selectedCourse, activeSessionOption, syncAllData]);
+
+  // Handlers for course and session dropdown changes
+  const handleCourseChange = (newCourse: string) => {
+    setSelectedCourse(newCourse);
+    const newOpts = getCourseSessionOptions(newCourse);
+    const defaultKey = newOpts[0]?.key || "";
+    setSelectedSessionKey(defaultKey);
+    setAllotResultMsg(null);
+    setAllotError(null);
+    setAllottedResults([]);
+  };
+
+  const handleSessionChange = (newKey: string) => {
+    setSelectedSessionKey(newKey);
+    setAllotResultMsg(null);
+    setAllotError(null);
+    setAllottedResults([]);
+  };
+
+  // Individual helper fetchers for targeted updates
+  const fetchSubjects = async (course: string, yearNumber?: number) => {
     try {
       setLoadingSubjects(true);
       setSubjectError(null);
-      const res = await fetch(`/api/admin/subjects?course_name=${encodeURIComponent(course)}`);
+      const yr = yearNumber ?? activeSessionOption.year_number ?? 1;
+      const res = await fetch(
+        `/api/admin/subjects?course_name=${encodeURIComponent(course)}&year_number=${encodeURIComponent(String(yr))}`
+      );
       const data = await res.json();
       if (!res.ok) {
         setSubjectError(data.error || "Failed to load subjects");
@@ -143,63 +363,6 @@ export default function ExamManagementHubPage() {
     }
   };
 
-  // Fetch Sessions for the course & ensure active session
-  const fetchSessions = useCallback(
-    async (course: string, targetSessionLabel?: string) => {
-      try {
-        setLoadingSessions(true);
-        const res = await fetch(`/api/admin/exam-sessions?course_name=${encodeURIComponent(course)}`);
-        const data = await res.json();
-        if (!res.ok) return [];
-
-        const list: ExamSession[] = data.sessions || [];
-        setSessions(list);
-
-        const currentOpt = targetSessionLabel || activeSessionOption?.session_label;
-        let matched = list.find((s) => s.session_label === currentOpt);
-
-        // Auto-provision if missing and session label exists
-        if (!matched && currentOpt) {
-          const opt = sessionOptions.find((o) => o.session_label === currentOpt) || activeSessionOption;
-          try {
-            const createRes = await fetch("/api/admin/exam-sessions", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                course_name: course,
-                session_label: opt.session_label,
-                exam_year_label: opt.exam_year_label,
-                academic_session: opt.academic_session,
-              }),
-            });
-            const createData = await createRes.json();
-            if (createRes.ok && createData.session) {
-              matched = createData.session;
-              setSessions((prev) => [matched!, ...prev]);
-            }
-          } catch (autoErr) {
-            console.error("Auto provision session error:", autoErr);
-          }
-        }
-
-        if (matched) {
-          setActiveSession(matched);
-        } else {
-          setActiveSession(null);
-        }
-
-        return list;
-      } catch (err) {
-        console.error("Fetch sessions error:", err);
-        return [];
-      } finally {
-        setLoadingSessions(false);
-      }
-    },
-    [activeSessionOption, sessionOptions]
-  );
-
-  // Fetch Tab B: Datesheet (scoped to course & session_id)
   const fetchDatesheet = useCallback(async (course: string, sessionId: string) => {
     if (!sessionId) {
       setDatesheetSubjects([]);
@@ -221,15 +384,16 @@ export default function ExamManagementHubPage() {
       setDatesheetSubjects(list);
       setDatesheetComplete(data.complete ?? false);
 
-      // Initialize form inputs map
-      const initialMap: Record<string, { exam_date: string; exam_time: string }> = {};
-      list.forEach((s) => {
-        initialMap[s.id] = {
-          exam_date: s.exam_date || "",
-          exam_time: s.exam_time || "Morning (10:00 AM)",
-        };
+      setDatesheetFormValues((prev) => {
+        const nextMap: Record<string, { exam_date: string; exam_time: string }> = { ...prev };
+        list.forEach((s) => {
+          nextMap[s.id] = {
+            exam_date: s.exam_date || prev[s.id]?.exam_date || "",
+            exam_time: s.exam_time || prev[s.id]?.exam_time || "Morning (10:00 AM - 01:00 PM)",
+          };
+        });
+        return nextMap;
       });
-      setDatesheetFormValues(initialMap);
     } catch (err) {
       console.error("Fetch datesheet error:", err);
       setDatesheetError("Network error loading datesheet.");
@@ -238,12 +402,12 @@ export default function ExamManagementHubPage() {
     }
   }, []);
 
-  // Fetch Tab E: Results
   const fetchResults = async (
     course: string,
     targetAcademicSession?: string,
     sessionLabel?: string,
-    yearNum?: number
+    yearNum?: number,
+    sessionId?: string
   ) => {
     try {
       setLoadingResults(true);
@@ -256,6 +420,7 @@ export default function ExamManagementHubPage() {
       if (sessionParam) url += `&academic_session=${encodeURIComponent(sessionParam)}`;
       if (labelParam) url += `&session_label=${encodeURIComponent(labelParam)}`;
       if (yrParam) url += `&year_number=${encodeURIComponent(String(yrParam))}`;
+      if (sessionId) url += `&session_id=${encodeURIComponent(sessionId)}`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -273,44 +438,6 @@ export default function ExamManagementHubPage() {
     }
   };
 
-
-  // Course change: update default session option
-  useEffect(() => {
-    const opts = getCourseSessionOptions(selectedCourse);
-    if (opts.length > 0) {
-      setSelectedSessionKey(opts[0].key);
-    }
-    fetchSubjects(selectedCourse);
-    setAllotResultMsg(null);
-    setAllotError(null);
-    setAllottedResults([]);
-  }, [selectedCourse]);
-
-  // When course or session key changes, sync sessions, datesheet & results
-  useEffect(() => {
-    if (selectedCourse && activeSessionOption) {
-      fetchSessions(selectedCourse, activeSessionOption.session_label);
-      fetchResults(
-        selectedCourse,
-        activeSessionOption.academic_session,
-        activeSessionOption.session_label,
-        activeSessionOption.year_number
-      );
-    }
-  }, [selectedCourse, activeSessionOption, fetchSessions]);
-
-  // When active session is loaded, fetch its datesheet
-  useEffect(() => {
-    if (selectedCourse && activeSession?.id) {
-      setDatesheetFormValues({});
-      setDateRowSuccessMsg({});
-      fetchDatesheet(selectedCourse, activeSession.id);
-    } else {
-      setDatesheetSubjects([]);
-      setDatesheetComplete(false);
-    }
-  }, [selectedCourse, activeSession?.id, fetchDatesheet]);
-
   // Handlers for Tab A: Subjects
   const handleAddSubject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -326,6 +453,7 @@ export default function ExamManagementHubPage() {
       course_name: selectedCourse,
       subject_name: name,
       subject_code: code,
+      year_number: activeSessionOption.year_number || 1,
     };
     if (newTheoryMax.trim() !== "") {
       body.theory_max = Number(newTheoryMax.trim());
@@ -354,7 +482,7 @@ export default function ExamManagementHubPage() {
       setNewTheoryMax("");
       setNewPracticalMax("");
       setNewCaMax("");
-      fetchSubjects(selectedCourse);
+      fetchSubjects(selectedCourse, activeSessionOption.year_number);
       if (activeSession?.id) {
         fetchDatesheet(selectedCourse, activeSession.id);
       }
@@ -412,10 +540,83 @@ export default function ExamManagementHubPage() {
     setDatesheetFormValues((prev) => ({
       ...prev,
       [subjectId]: {
-        ...(prev[subjectId] || { exam_date: "", exam_time: "" }),
+        ...(prev[subjectId] || { exam_date: "", exam_time: "Morning (10:00 AM - 01:00 PM)" }),
         [field]: value,
       },
     }));
+  };
+
+  const handleApplyShiftToAll = (shiftText: string) => {
+    if (!shiftText) return;
+    setDatesheetFormValues((prev) => {
+      const updated = { ...prev };
+      displayDatesheetRows.forEach((s) => {
+        updated[s.id] = {
+          exam_date: updated[s.id]?.exam_date || s.exam_date || "",
+          exam_time: shiftText,
+        };
+      });
+      return updated;
+    });
+  };
+
+  const handleAutoFillDates = () => {
+    if (!bulkStartDate) {
+      alert("Please select a starting date first (शुरुआती तारीख चुनें).");
+      return;
+    }
+    const start = new Date(bulkStartDate);
+    if (isNaN(start.getTime())) {
+      alert("Invalid starting date.");
+      return;
+    }
+
+    const gap = parseInt(bulkGapDays, 10) || 1;
+    const nextValues: Record<string, { exam_date: string; exam_time: string }> = { ...datesheetFormValues };
+    const curr = new Date(start);
+
+    displayDatesheetRows.forEach((s, idx) => {
+      if (idx > 0) {
+        curr.setDate(curr.getDate() + gap);
+      }
+      const yyyy = curr.getFullYear();
+      const mm = String(curr.getMonth() + 1).padStart(2, "0");
+      const dd = String(curr.getDate()).padStart(2, "0");
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
+      nextValues[s.id] = {
+        exam_date: dateStr,
+        exam_time: nextValues[s.id]?.exam_time || bulkShiftVal || "Morning (10:00 AM - 01:00 PM)",
+      };
+    });
+
+    setDatesheetFormValues(nextValues);
+  };
+
+  const ensureTargetSessionId = async (): Promise<string | null> => {
+    let targetSessionId = activeSession?.id;
+    if (!targetSessionId && selectedCourse && activeSessionOption) {
+      const createRes = await fetch("/api/admin/exam-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          course_name: selectedCourse,
+          session_label: activeSessionOption.session_label,
+          exam_year_label: activeSessionOption.exam_year_label,
+          academic_session: activeSessionOption.academic_session,
+        }),
+      });
+      const createData = await createRes.json();
+      if (createRes.ok && createData.session?.id) {
+        targetSessionId = createData.session.id;
+        setActiveSession(createData.session);
+        setSessions((prev) => [createData.session, ...prev.filter((s) => s.id !== createData.session.id)]);
+      } else {
+        alert(createData.error || "Please wait for exam session to initialize.");
+        return null;
+      }
+    }
+    return targetSessionId || null;
   };
 
   const handleSaveDatesheetRow = async (subjectId: string) => {
@@ -427,37 +628,11 @@ export default function ExamManagementHubPage() {
 
     setSavingDateRowId(subjectId);
     setDateRowSuccessMsg((prev) => ({ ...prev, [subjectId]: "" }));
+    setBulkSuccessMsg(null);
 
     try {
-      let targetSessionId = activeSession?.id;
-
-      // If activeSession is not yet populated, dynamically ensure/provision it now
-      if (!targetSessionId && selectedCourse && activeSessionOption) {
-        const createRes = await fetch("/api/admin/exam-sessions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            course_name: selectedCourse,
-            session_label: activeSessionOption.session_label,
-            exam_year_label: activeSessionOption.exam_year_label,
-            academic_session: activeSessionOption.academic_session,
-          }),
-        });
-        const createData = await createRes.json();
-        if (createRes.ok && createData.session?.id) {
-          targetSessionId = createData.session.id;
-          setActiveSession(createData.session);
-          setSessions((prev) => [createData.session, ...prev.filter((s) => s.id !== createData.session.id)]);
-        } else {
-          alert(createData.error || "Please wait for exam session to initialize.");
-          return;
-        }
-      }
-
-      if (!targetSessionId) {
-        alert("Please ensure exam session is ready.");
-        return;
-      }
+      const targetSessionId = await ensureTargetSessionId();
+      if (!targetSessionId) return;
 
       const res = await fetch("/api/admin/datesheets", {
         method: "POST",
@@ -481,6 +656,72 @@ export default function ExamManagementHubPage() {
       alert("Network error saving datesheet entry.");
     } finally {
       setSavingDateRowId(null);
+    }
+  };
+
+  const handleSaveAllDatesheetRows = async () => {
+    const entriesToSave: Array<{ subject_id: string; exam_date: string; exam_time: string }> = [];
+    const emptySubjects: string[] = [];
+
+    displayDatesheetRows.forEach((s) => {
+      const val = datesheetFormValues[s.id];
+      if (val && val.exam_date && val.exam_time) {
+        entriesToSave.push({
+          subject_id: s.id,
+          exam_date: val.exam_date,
+          exam_time: val.exam_time,
+        });
+      } else {
+        emptySubjects.push(s.subject_name);
+      }
+    });
+
+    if (entriesToSave.length === 0) {
+      alert("Please fill in Exam Date and Exam Time for at least one subject.");
+      return;
+    }
+
+    setSavingAllDates(true);
+    setDatesheetError(null);
+    setBulkSuccessMsg(null);
+
+    try {
+      const targetSessionId = await ensureTargetSessionId();
+      if (!targetSessionId) return;
+
+      const res = await fetch("/api/admin/datesheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exam_session_id: targetSessionId,
+          entries: entriesToSave,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDatesheetError(data.error || "Failed to save datesheet schedule.");
+        return;
+      }
+
+      const successUpdates: Record<string, string> = {};
+      entriesToSave.forEach((entry) => {
+        successUpdates[entry.subject_id] = "Saved ✓";
+      });
+      setDateRowSuccessMsg((prev) => ({ ...prev, ...successUpdates }));
+
+      const count = entriesToSave.length;
+      if (emptySubjects.length === 0) {
+        setBulkSuccessMsg(`All ${count} subjects schedule saved successfully! (पूरा टाइम-टेबल सेव हो गया)`);
+      } else {
+        setBulkSuccessMsg(`${count} subjects schedule saved! (${emptySubjects.length} subject(s) pending)`);
+      }
+
+      fetchDatesheet(selectedCourse, targetSessionId);
+    } catch (err) {
+      console.error("Bulk save datesheet error:", err);
+      setDatesheetError("Network error saving datesheet schedule.");
+    } finally {
+      setSavingAllDates(false);
     }
   };
 
@@ -588,7 +829,7 @@ export default function ExamManagementHubPage() {
             </div>
             <select
               value={selectedCourse}
-              onChange={(e) => setSelectedCourse(e.target.value)}
+              onChange={(e) => handleCourseChange(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-[#143E66] focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
             >
               {PARAMEDICAL_COURSES.map((course) => (
@@ -610,8 +851,8 @@ export default function ExamManagementHubPage() {
               </span>
             </div>
             <select
-              value={selectedSessionKey}
-              onChange={(e) => setSelectedSessionKey(e.target.value)}
+              value={selectedSessionKey || sessionOptions[0]?.key}
+              onChange={(e) => handleSessionChange(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-[#143E66] focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
             >
               {sessionOptions.map((opt) => (
@@ -631,7 +872,7 @@ export default function ExamManagementHubPage() {
                   : "bg-slate-100 text-slate-600 border-slate-200"
               }`}
             >
-              {subjects.length} Subjects Defined
+              {subjects.length} Subjects Defined ({activeSessionOption.year_number === 2 ? "2nd Year" : "1st Year"})
             </span>
             <span
               className={`px-2.5 py-1 rounded text-[11px] font-bold border ${
@@ -708,7 +949,13 @@ export default function ExamManagementHubPage() {
         <button
           onClick={() => {
             setActiveTab("results");
-            fetchResults(selectedCourse);
+            fetchResults(
+              selectedCourse,
+              activeSessionOption.academic_session,
+              activeSessionOption.session_label,
+              activeSessionOption.year_number,
+              activeSession?.id
+            );
           }}
           className={`px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === "results"
@@ -734,11 +981,16 @@ export default function ExamManagementHubPage() {
           {/* Left 2 Cols: Subjects Table */}
           <div className="lg:col-span-2 bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
             <div className="bg-[#143E66] px-5 py-3.5 text-white border-b-2 border-[#D4AF37] flex items-center justify-between">
-              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
-                Subjects for {selectedCourse} ({subjects.length})
-              </h2>
+              <div>
+                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+                  Subjects for {selectedCourse} — {activeSessionOption.year_number === 2 ? "2nd Year" : "1st Year"} ({subjects.length})
+                </h2>
+                <p className="text-[11px] text-slate-300 font-normal mt-0.5">
+                  Showing syllabus curriculum for {activeSessionOption.label}
+                </p>
+              </div>
               <button
-                onClick={() => fetchSubjects(selectedCourse)}
+                onClick={() => fetchSubjects(selectedCourse, activeSessionOption.year_number)}
                 disabled={loadingSubjects}
                 className="text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1 cursor-pointer"
               >
@@ -857,7 +1109,7 @@ export default function ExamManagementHubPage() {
                 <svg className="w-4 h-4 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                 </svg>
-                <span>Add New Subject</span>
+                <span>Add New Subject ({activeSessionOption.year_number === 2 ? "2nd Year" : "1st Year"})</span>
               </h2>
             </div>
 
@@ -953,7 +1205,7 @@ export default function ExamManagementHubPage() {
                 disabled={addingSubject}
                 className="w-full py-2.5 px-4 bg-[#143E66] hover:bg-[#0c2a47] active:bg-[#081f34] text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                {addingSubject ? "Adding Subject..." : "Add Subject to Course"}
+                {addingSubject ? "Adding Subject..." : `Add Subject to ${activeSessionOption.year_number === 2 ? "2nd Year" : "1st Year"}`}
               </button>
             </form>
           </div>
@@ -1147,17 +1399,171 @@ export default function ExamManagementHubPage() {
             </div>
           )}
 
+          {/* Bulk Success Message Banner */}
+          {bulkSuccessMsg && (
+            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-lg text-emerald-900 text-xs sm:text-sm flex items-center justify-between shadow-xs animate-fadeIn">
+              <div className="flex items-center gap-2 font-bold">
+                <svg className="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{bulkSuccessMsg}</span>
+              </div>
+              <button
+                onClick={() => setBulkSuccessMsg(null)}
+                className="text-emerald-700 hover:text-emerald-900 text-xs font-bold px-2 py-1 hover:bg-emerald-100 rounded"
+              >
+                ✕ Dismiss
+              </button>
+            </div>
+          )}
+
+          {/* Quick Setup & Auto-Fill Toolbar */}
+          {subjects.length > 0 && (
+            <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-[#143E66] uppercase tracking-wider flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-[#143E66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Quick Fill Tools / त्वरित सुविधा (Multiple Dates & Timings)
+                </div>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Fill multiple dates at once then click <strong>Save All</strong>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200 text-xs">
+                {/* Tool 1: Consecutive Dates Auto-Fill */}
+                <div className="bg-white p-3 rounded-md border border-slate-200 flex flex-col gap-2">
+                  <div className="font-bold text-slate-800 flex items-center gap-1">
+                    <span>1. Auto-Fill Date Sequence / क्रमिक तिथियां भरें:</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <div className="sm:col-span-6">
+                      <label className="text-[11px] text-slate-500 font-semibold block mb-0.5">Start Date (शुरुआती तारीख):</label>
+                      <input
+                        type="date"
+                        value={bulkStartDate}
+                        onChange={(e) => setBulkStartDate(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <label className="text-[11px] text-slate-500 font-semibold block mb-0.5">Gap (अन्तराल):</label>
+                      <select
+                        value={bulkGapDays}
+                        onChange={(e) => setBulkGapDays(e.target.value)}
+                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white"
+                      >
+                        <option value="1">+1 Day (Daily)</option>
+                        <option value="2">+2 Days (Alt)</option>
+                        <option value="3">+3 Days</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-3 flex items-end">
+                      <button
+                        type="button"
+                        onClick={handleAutoFillDates}
+                        className="w-full mt-4 sm:mt-0 py-1.5 px-2.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded text-[11px] transition cursor-pointer shadow-xs"
+                      >
+                        Fill Dates
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tool 2: Apply Shift to All */}
+                <div className="bg-white p-3 rounded-md border border-slate-200 flex flex-col gap-2">
+                  <div className="font-bold text-slate-800 flex items-center gap-1">
+                    <span>2. Common Shift / Time (सभी में एक समय लागू करें):</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <div className="sm:col-span-8">
+                      <label className="text-[11px] text-slate-500 font-semibold block mb-0.5">Shift / Time String:</label>
+                      <input
+                        type="text"
+                        value={bulkShiftVal}
+                        onChange={(e) => setBulkShiftVal(e.target.value)}
+                        placeholder="Morning (10:00 AM - 01:00 PM)"
+                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
+                      />
+                    </div>
+                    <div className="sm:col-span-4 flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyShiftToAll(bulkShiftVal)}
+                        className="w-full mt-4 sm:mt-0 py-1.5 px-2.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded text-[11px] transition cursor-pointer shadow-xs"
+                      >
+                        Apply to All
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = "Morning (10:00 AM - 01:00 PM)";
+                        setBulkShiftVal(s);
+                        handleApplyShiftToAll(s);
+                      }}
+                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10.5px] rounded border border-slate-300 cursor-pointer"
+                    >
+                      Morning (10:00 AM - 01:00 PM)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = "Evening (02:00 PM - 05:00 PM)";
+                        setBulkShiftVal(s);
+                        handleApplyShiftToAll(s);
+                      }}
+                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10.5px] rounded border border-slate-300 cursor-pointer"
+                    >
+                      Evening (02:00 PM - 05:00 PM)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Datesheet Schedule Table */}
           {subjects.length > 0 && (
             <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
-              <div className="bg-[#143E66] px-5 py-3.5 text-white border-b-2 border-[#D4AF37] flex items-center justify-between">
+              <div className="bg-[#143E66] px-5 py-3.5 text-white border-b-2 border-[#D4AF37] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider">
                     Datesheet Schedule / परीक्षा समय सारणी
                   </h2>
                   <p className="text-[11px] text-slate-300 font-medium mt-0.5">
-                    Session: {activeSessionOption.label}
+                    Session: {activeSessionOption.label} • {displayDatesheetRows.length} Subject(s)
                   </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveAllDatesheetRows}
+                    disabled={savingAllDates}
+                    className="px-4 py-2 bg-[#D4AF37] hover:bg-[#b5952f] text-[#00031D] font-black rounded shadow-md text-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {savingAllDates ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Saving All Dates...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Save All Dates / सभी तिथियां सहेजें
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -1181,7 +1587,10 @@ export default function ExamManagementHubPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-200 text-slate-800">
                     {displayDatesheetRows.map((s, idx) => {
-                      const formVal = datesheetFormValues[s.id] || { exam_date: "", exam_time: "" };
+                      const formVal = datesheetFormValues[s.id] || {
+                        exam_date: s.exam_date || "",
+                        exam_time: s.exam_time || "Morning (10:00 AM - 01:00 PM)",
+                      };
                       const isSaving = savingDateRowId === s.id;
                       const successMsg = dateRowSuccessMsg[s.id];
 
@@ -1217,8 +1626,9 @@ export default function ExamManagementHubPage() {
                                 </span>
                               )}
                               <button
+                                type="button"
                                 onClick={() => handleSaveDatesheetRow(s.id)}
-                                disabled={isSaving}
+                                disabled={isSaving || savingAllDates}
                                 className="px-3 py-1.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded shadow-xs text-xs transition-colors cursor-pointer disabled:opacity-50"
                               >
                                 {isSaving ? "Saving..." : "Save Row"}
@@ -1230,6 +1640,39 @@ export default function ExamManagementHubPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Bottom Bulk Save Bar */}
+              <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="text-xs text-slate-600">
+                  <span className="font-semibold text-slate-800">
+                    {displayDatesheetRows.filter((s) => datesheetFormValues[s.id]?.exam_date && datesheetFormValues[s.id]?.exam_time).length} of {displayDatesheetRows.length}
+                  </span>{" "}
+                  subjects have dates configured. Click <strong>Save All Dates</strong> to save the entire schedule at once.
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveAllDatesheetRows}
+                  disabled={savingAllDates}
+                  className="px-5 py-2.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded-md shadow-sm text-xs transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {savingAllDates ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Saving All Dates...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save All Dates / सभी तिथियां सहेजें
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
@@ -1426,7 +1869,8 @@ export default function ExamManagementHubPage() {
                   selectedCourse,
                   activeSessionOption.academic_session,
                   activeSessionOption.session_label,
-                  activeSessionOption.year_number
+                  activeSessionOption.year_number,
+                  activeSession?.id
                 )
               }
               disabled={loadingResults}
@@ -1480,13 +1924,14 @@ export default function ExamManagementHubPage() {
                 <tbody className="divide-y divide-slate-200 text-slate-800">
                   {resultStudents.map((s, idx) => {
                     const isLocked = activeSessionOption.year_number === 2 && s.first_year_passed === false;
+                    const resultLink = `/admin/dashboard/exam-management/results/${s.id}?returnTab=${activeTab}&course=${encodeURIComponent(selectedCourse)}&session=${encodeURIComponent(selectedSessionKey)}`;
 
                     return (
                       <tr
                         key={s.id}
                         onClick={() => {
                           if (!isLocked) {
-                            router.push(`/admin/dashboard/exam-management/results/${s.id}`);
+                            router.push(resultLink);
                           }
                         }}
                         className={`transition-colors ${
@@ -1516,7 +1961,7 @@ export default function ExamManagementHubPage() {
                             </span>
                           ) : (
                             <Link
-                              href={`/admin/dashboard/exam-management/results/${s.id}`}
+                              href={resultLink}
                               onClick={(e) => e.stopPropagation()}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#143E66] hover:bg-[#0c2a47] text-white font-bold rounded shadow-xs text-xs transition-colors"
                             >

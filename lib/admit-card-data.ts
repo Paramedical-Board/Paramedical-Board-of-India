@@ -72,11 +72,25 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
   const centerName = college?.college_name || "Self Examination Center (Affiliated Institute)";
   const centerCode = college?.username?.toUpperCase() || "IPBI";
 
-  const { data: subjectRows, error: subjectError } = await supabaseAdmin
+  const yearNumber = session.session_label?.includes("2nd Year") ? 2 : 1;
+
+  let { data: subjectRows, error: subjectError } = await supabaseAdmin
     .from("course_subjects")
     .select("id, subject_name, subject_code")
     .eq("course_name", reg.course)
+    .eq("year_number", yearNumber)
     .order("created_at", { ascending: true });
+
+  if (subjectError && subjectError.message?.includes("year_number")) {
+    const fallback = await supabaseAdmin
+      .from("course_subjects")
+      .select("id, subject_name, subject_code")
+      .eq("course_name", reg.course)
+      .order("created_at", { ascending: true });
+
+    subjectRows = fallback.data;
+    subjectError = fallback.error;
+  }
 
   if (subjectError) {
     return { data: null, error: subjectError.message };

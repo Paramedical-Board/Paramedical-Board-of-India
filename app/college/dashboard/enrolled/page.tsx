@@ -120,7 +120,7 @@ export default function CollegeEnrolledStudentsPage() {
       {/* Print Only Header */}
       <div className="hidden print:block mb-6 text-center border-b-2 border-slate-800 pb-4">
         <h1 className="text-xl font-black uppercase text-slate-900">INDIAN PARAMEDICAL BOARD OF INDIA</h1>
-        <h2 className="text-sm font-bold text-slate-700">Official Enrolled Students Master List (Session 2026-2027)</h2>
+        <h2 className="text-sm font-bold text-slate-700">Official Enrolled Students Master List</h2>
         <p className="text-xs text-slate-500 mt-1">Generated on: {new Date().toLocaleDateString("en-IN")}</p>
       </div>
 

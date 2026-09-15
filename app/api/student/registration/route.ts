@@ -4,6 +4,18 @@ import { registrationSchema } from '@/lib/validations/registration';
 import { verifyToken, COOKIE_NAME } from '@/lib/auth';
 import { isEmailVerified } from '@/lib/otp';
 
+function extractSessionDigits(academicSession: string): string {
+  const matches = academicSession.match(/\d{4}/g);
+  if (matches && matches.length >= 2) {
+    return matches[0].slice(-2) + matches[1].slice(-2);
+  } else if (matches && matches.length === 1) {
+    const y1 = parseInt(matches[0].slice(-2), 10);
+    const y2 = (y1 + 1) % 100;
+    return `${matches[0].slice(-2)}${String(y2).padStart(2, '0')}`;
+  }
+  return '2324';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get(COOKIE_NAME)?.value;
@@ -34,9 +46,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Lookup college_code for formatted registration_no
+    const { data: college } = await supabaseAdmin
+      .from('colleges')
+      .select('college_code')
+      .eq('id', session.college_id)
+      .single();
+
+    const collegeCode = college?.college_code ? String(college.college_code).padStart(2, '0') : '01';
+    const sessDigits = extractSessionDigits(parsed.data.academic_session);
+    const prefix = `IPMB${collegeCode}${sessDigits}`;
+
+    // Get next sequence for this college and session
+    const { data: latestReg } = await supabaseAdmin
+      .from('student_registrations')
+      .select('registration_no')
+      .like('registration_no', `${prefix}%`)
+      .order('registration_no', { ascending: false })
+      .limit(1);
+
+    let nextSeq = 1;
+    if (latestReg && latestReg.length > 0 && latestReg[0].registration_no) {
+      const lastSeqStr = latestReg[0].registration_no.slice(prefix.length);
+      const parsedSeq = parseInt(lastSeqStr, 10);
+      if (!isNaN(parsedSeq)) {
+        nextSeq = parsedSeq + 1;
+      }
+    }
+
+    const registration_no = `${prefix}${String(nextSeq).padStart(2, '0')}`;
+
     const { data, error } = await supabaseAdmin
       .from('student_registrations')
-      .insert({ ...parsed.data, email: normalizedEmail, college_id: session.college_id })
+      .insert({
+        ...parsed.data,
+        email: normalizedEmail,
+        college_id: session.college_id,
+        registration_no,
+      })
       .select()
       .single();
 

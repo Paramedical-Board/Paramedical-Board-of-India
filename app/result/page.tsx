@@ -11,6 +11,7 @@ import { ResultData } from "@/lib/result-data";
 export default function PublicResultLookupPage() {
   const [rollNo, setRollNo] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [year, setYear] = useState("1st Year");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ResultData | null>(null);
@@ -38,6 +39,7 @@ export default function PublicResultLookupPage() {
         body: JSON.stringify({
           roll_no: trimmedRoll,
           date_of_birth: trimmedDob,
+          year,
         }),
       });
 
@@ -68,6 +70,7 @@ export default function PublicResultLookupPage() {
     setError(null);
     setRollNo("");
     setDateOfBirth("");
+    setYear("1st Year");
   };
 
   return (
@@ -244,6 +247,57 @@ export default function PublicResultLookupPage() {
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1">
                     Select your exact date of birth as registered.
+                  </p>
+                </div>
+
+                {/* Examination Year / Part Field */}
+                <div>
+                  <label
+                    htmlFor="examination_year"
+                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+                  >
+                    Examination Year / परीक्षा वर्ष <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 14l9-5-9-5-9 5 9 5z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
+                        />
+                      </svg>
+                    </div>
+                    <select
+                      id="examination_year"
+                      required
+                      value={year}
+                      onChange={(e) => setYear(e.target.value)}
+                      className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#143E66] focus:border-transparent transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="1st Year">1st Year / प्रथम वर्ष</option>
+                      <option value="2nd Year">2nd Year / द्वितीय वर्ष</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Select your examination year (1st Year or 2nd Year).
                   </p>
                 </div>
 

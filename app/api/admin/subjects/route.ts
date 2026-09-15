@@ -12,15 +12,35 @@ export async function GET(req: NextRequest) {
   }
 
   const courseName = req.nextUrl.searchParams.get("course_name");
+  const yearNumberParam = req.nextUrl.searchParams.get("year_number");
+  const yearNumber = yearNumberParam ? parseInt(yearNumberParam, 10) : 1;
+
   if (!courseName) {
     return NextResponse.json({ error: "course_name is required" }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from("course_subjects")
     .select("*")
-    .eq("course_name", courseName)
-    .order("created_at", { ascending: true });
+    .eq("course_name", courseName);
+
+  if (yearNumber) {
+    query = query.eq("year_number", yearNumber);
+  }
+
+  let { data, error } = await query.order("created_at", { ascending: true });
+
+  // Fallback if year_number column has not been added to DB yet
+  if (error && error.message?.includes("year_number")) {
+    const fallback = await supabaseAdmin
+      .from("course_subjects")
+      .select("*")
+      .eq("course_name", courseName)
+      .order("created_at", { ascending: true });
+
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -38,7 +58,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { course_name, subject_name, subject_code, theory_max, practical_max, ca_max } = body;
+  const { course_name, subject_name, subject_code, theory_max, practical_max, ca_max, year_number } = body;
 
   if (!course_name || !subject_name || !subject_code) {
     return NextResponse.json(
@@ -47,18 +67,34 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { data, error } = await supabaseAdmin
+  const insertPayload: Record<string, any> = {
+    course_name,
+    subject_name,
+    subject_code,
+    theory_max: theory_max ?? null,
+    practical_max: practical_max ?? null,
+    ca_max: ca_max ?? null,
+    year_number: Number(year_number) || 1,
+  };
+
+  let { data, error } = await supabaseAdmin
     .from("course_subjects")
-    .insert({
-      course_name,
-      subject_name,
-      subject_code,
-      theory_max: theory_max ?? null,
-      practical_max: practical_max ?? null,
-      ca_max: ca_max ?? null,
-    })
+    .insert(insertPayload)
     .select()
     .single();
+
+  // Fallback if year_number column not yet migrated
+  if (error && error.message?.includes("year_number")) {
+    delete insertPayload.year_number;
+    const fallback = await supabaseAdmin
+      .from("course_subjects")
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

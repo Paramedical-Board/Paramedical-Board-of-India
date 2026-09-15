@@ -17,8 +17,29 @@ export async function GET(req: NextRequest) {
   const academicSession = req.nextUrl.searchParams.get("academic_session");
   const sessionLabel = req.nextUrl.searchParams.get("session_label");
   const yearNumber = req.nextUrl.searchParams.get("year_number");
+  const sessionId = req.nextUrl.searchParams.get("session_id");
   if (!courseName) {
     return NextResponse.json({ error: "course_name is required" }, { status: 400 });
+  }
+
+  // Resolve target exam session ID
+  let targetSessionId = sessionId;
+  if (sessionLabel) {
+    const { data: sessionData } = await supabaseAdmin
+      .from("exam_sessions")
+      .select("id")
+      .eq("course_name", courseName)
+      .eq("session_label", sessionLabel)
+      .maybeSingle();
+
+    if (sessionData?.id) {
+      targetSessionId = sessionData.id;
+    }
+  }
+
+  // If no exam session exists yet for this label, return empty list
+  if (!targetSessionId) {
+    return NextResponse.json({ students: [], released: false });
   }
 
   let query = supabaseAdmin
@@ -26,17 +47,9 @@ export async function GET(req: NextRequest) {
     .select("id, registration_no, candidate_name, roll_no")
     .eq("course", courseName)
     .eq("status", "approved")
+    .eq("exam_session_id", targetSessionId)
     .not("admit_card_generated_at", "is", null)
     .order("roll_no", { ascending: true });
-
-  if (academicSession) {
-    query = query.eq("academic_session", academicSession);
-  } else if (sessionLabel) {
-    const resolved = getBatchAcademicSessionFromSessionLabel(sessionLabel);
-    if (resolved) {
-      query = query.eq("academic_session", resolved);
-    }
-  }
 
   const { data, error } = await query;
 
@@ -63,7 +76,7 @@ export async function GET(req: NextRequest) {
     })
   );
 
-  const released = await isCourseResultsReleased(courseName);
+  const released = await isCourseResultsReleased(courseName, targetSessionId);
 
   return NextResponse.json({ students: enrichedStudents, released });
 }

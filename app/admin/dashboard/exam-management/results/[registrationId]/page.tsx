@@ -9,9 +9,10 @@ import PrintButton from "@/components/PrintButton";
 
 interface PageProps {
   params: Promise<{ registrationId: string }>;
+  searchParams?: Promise<{ returnTab?: string; course?: string; session?: string }>;
 }
 
-export default async function ResultEntryPage({ params }: PageProps) {
+export default async function ResultEntryPage({ params, searchParams }: PageProps) {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   const admin = token ? verifyAdminToken(token) : null;
@@ -21,7 +22,16 @@ export default async function ResultEntryPage({ params }: PageProps) {
   }
 
   const { registrationId } = await params;
+  const sp = searchParams ? await searchParams : {};
   const { data: resultData, error } = await getResultData(registrationId);
+
+  const returnTab = sp.returnTab || "results";
+  const returnCourse = sp.course || resultData?.course || "";
+  const returnSession = sp.session || "";
+
+  let backUrl = `/admin/dashboard/exam-management?tab=${encodeURIComponent(returnTab)}`;
+  if (returnCourse) backUrl += `&course=${encodeURIComponent(returnCourse)}`;
+  if (returnSession) backUrl += `&session=${encodeURIComponent(returnSession)}`;
 
   // If error is present or student not eligible for result entry
   if (error || !resultData) {
@@ -50,7 +60,7 @@ export default async function ResultEntryPage({ params }: PageProps) {
             {error || "Student result details could not be retrieved."}
           </p>
           <Link
-            href="/admin/dashboard/exam-management"
+            href={backUrl}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold rounded shadow-xs transition-colors"
           >
             ← Back to Exam Management
@@ -66,7 +76,7 @@ export default async function ResultEntryPage({ params }: PageProps) {
       <div className="max-w-7xl mx-auto mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print print:hidden">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/dashboard/exam-management"
+            href={backUrl}
             className="text-xs font-semibold text-[#143E66] hover:underline flex items-center gap-1"
           >
             ← Back to Exam Management Hub

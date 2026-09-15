@@ -61,6 +61,26 @@ export const AFFILIATED_INSTITUTIONS_DATA: AffiliatedInstitution[] = [
     ],
     contactPerson: "Principal / Director",
   },
+  {
+    id: "bpc-dibrugarh-assam",
+    centerCode: "IPBI-AS-2043",
+    name: "Barnali Paramedical College",
+    hindiName: "बरनाली पैरामेडिकल कॉलेज",
+    district: "Dibrugarh",
+    state: "Assam",
+    address: "Dibrugarh, District Dibrugarh, Assam - 786001",
+    affiliatedSince: "2024",
+    status: "Active & Recognized",
+    approvedPrograms: [
+      "Medical Laboratory Technology (CMLT)",
+      "Operation Theatre Technology (COTT)",
+      "ECG Technician (CECG)",
+      "General Duty Assistant (CGDA)",
+      "Community Medical Services & Essential Drugs (CMS & ED)",
+      "First Aid & Nursing (CFAN)",
+    ],
+    contactPerson: "Principal / Director",
+  },
 ];
 
 export default function AffiliatedInstitutionsPage() {
@@ -349,7 +369,7 @@ export default function AffiliatedInstitutionsPage() {
                       Indian Paramedical Board Accredited
                     </span>
                     <span className="text-[10.5px] font-semibold text-[#143E66] bg-[#143E66]/10 px-2.5 py-1 rounded-md">
-                      {inst.district}, UP
+                      {inst.district}, {inst.state}
                     </span>
                   </div>
                 </div>

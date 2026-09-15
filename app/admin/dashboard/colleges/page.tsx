@@ -7,6 +7,7 @@ interface CollegeItem {
   id: string;
   college_name: string;
   username: string;
+  college_code?: string;
   is_active: boolean;
   created_at: string;
 }
@@ -15,6 +16,7 @@ interface ActiveCredentials {
   id: string;
   college_name: string;
   username: string;
+  college_code?: string;
   is_active: boolean;
   created_at: string;
   password?: string;
@@ -28,6 +30,7 @@ export default function AdminCollegesPage() {
   // Form State (Register New College)
   const [collegeName, setCollegeName] = useState("");
   const [username, setUsername] = useState("");
+  const [collegeCode, setCollegeCode] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -235,6 +238,7 @@ export default function AdminCollegesPage() {
           college_name: trimmedName,
           username: trimmedUsername,
           password: trimmedPassword,
+          college_code: collegeCode.trim() || undefined,
         }),
       });
 
@@ -260,6 +264,7 @@ export default function AdminCollegesPage() {
       // Clear the form
       setCollegeName("");
       setUsername("");
+      setCollegeCode("");
       setPassword("");
       setFormError(null);
 
@@ -428,8 +433,25 @@ export default function AdminCollegesPage() {
               </p>
             </div>
 
-            {/* 3. Password */}
+            {/* 3. College Code */}
             <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                College Code (कोड) <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={collegeCode}
+                onChange={(e) => setCollegeCode(e.target.value)}
+                placeholder="e.g. 07 (Leave blank to auto-generate)"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition"
+              />
+              <p className="text-[11px] text-slate-500 font-medium mt-1">
+                Used in registration numbers (e.g. IPMB<strong>01</strong>232401).
+              </p>
+            </div>
+
+            {/* 4. Password */}
+            <div className="md:col-span-2">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                   Password (Visible / Editable) <span className="text-red-500">*</span>
@@ -565,6 +587,17 @@ export default function AdminCollegesPage() {
                 </button>
               </div>
 
+              {/* College Code */}
+              {activeCredentials.college_code && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-white/80 border border-emerald-200 rounded-lg">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wide w-28">College Code:</span>
+                    <span className="text-sm font-mono font-bold text-[#143E66]">{activeCredentials.college_code}</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 italic">Used in Registration No</span>
+                </div>
+              )}
+
               {/* Username */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-white/80 border border-emerald-200 rounded-lg">
                 <div className="flex items-baseline gap-2">
@@ -618,20 +651,13 @@ export default function AdminCollegesPage() {
               Registered Colleges / पंजीकृत कॉलेज सूची
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              All active and inactive institutions authorized under the Indian Paramedical Board.
+              Official affiliated paramedical colleges with access to the student admission portal.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => fetchColleges()}
-            disabled={loading}
-            className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition cursor-pointer"
-          >
-            <svg className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh List
-          </button>
+
+          <div className="text-xs font-semibold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-lg border border-slate-200 self-start sm:self-center">
+            Total Colleges: <strong className="text-slate-900">{colleges.length}</strong>
+          </div>
         </div>
 
         {/* Global/Table Action Error Inline Banner */}
@@ -665,8 +691,8 @@ export default function AdminCollegesPage() {
 
         {/* Table Content */}
         {loading ? (
-          <div className="p-12 flex flex-col items-center justify-center gap-3">
-            <div className="w-8 h-8 border-4 border-[#143E66]/20 border-t-[#143E66] rounded-full animate-spin"></div>
+          <div className="p-12 text-center">
+            <div className="w-8 h-8 border-3 border-[#143E66] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
             <p className="text-xs font-semibold text-slate-500">Loading colleges...</p>
           </div>
         ) : colleges.length === 0 ? (
@@ -686,6 +712,7 @@ export default function AdminCollegesPage() {
             <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold text-[11px] tracking-wider">
+                  <th className="py-3 px-4 w-20">Code</th>
                   <th className="py-3 px-4 sm:px-6">College Name</th>
                   <th className="py-3 px-4">Username</th>
                   <th className="py-3 px-4">Status</th>
@@ -699,6 +726,11 @@ export default function AdminCollegesPage() {
 
                   return (
                     <tr key={college.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#143E66]">
+                        <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs">
+                          {college.college_code || "—"}
+                        </span>
+                      </td>
                       <td className="py-3.5 px-4 sm:px-6 font-semibold text-slate-900">
                         {college.college_name}
                       </td>

@@ -66,8 +66,20 @@ export default function AdmitCardLayout({
         }
       `}</style>
 
+      {/* Background Watermark (Grand Middle Span ~480px) */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-[160px] bottom-[160px] flex items-center justify-center overflow-hidden z-0 select-none"
+        aria-hidden="true"
+      >
+        <img
+          src="/logo.png"
+          alt=""
+          className="w-[480px] h-[480px] max-w-[85%] object-contain opacity-[0.25] select-none"
+        />
+      </div>
+
       {/* 1. Header */}
-      <div className="flex items-center justify-between gap-3 pb-2 relative">
+      <div className="flex items-center justify-between gap-3 pb-2 relative z-10">
         {/* Left Circular Logo */}
         <div className="w-[76px] h-[76px] shrink-0 relative flex items-center justify-center">
           <img
@@ -101,15 +113,15 @@ export default function AdmitCardLayout({
       </div>
 
       {/* Horizontal Maroon Divider */}
-      <div className="h-[2.5px] bg-[#8b0000] w-full my-2"></div>
+      <div className="h-[2.5px] bg-[#8b0000] w-full my-2 relative z-10"></div>
 
       {/* 2. Hall Ticket Title */}
-      <div className="text-center font-bold text-[#0b2545] text-sm tracking-wider uppercase my-2.5">
+      <div className="text-center font-bold text-[#0b2545] text-sm tracking-wider uppercase my-2.5 relative z-10">
         EXAMINATION HALL TICKET ({admitCard.session_label ? `SESSION ${admitCard.session_label.toUpperCase()}` : "EXAMINATION SESSION"})
       </div>
 
       {/* 3. Candidate & Examination Details Box */}
-      <div className="border border-slate-300 rounded-md p-3 mb-3 bg-white">
+      <div className="border border-slate-300 rounded-md p-3 mb-3 bg-white/60 relative z-10">
         <div className="text-xs font-bold text-[#8b0000] uppercase tracking-wider mb-2.5">
           CANDIDATE & EXAMINATION DETAILS
         </div>
@@ -210,20 +222,20 @@ export default function AdmitCardLayout({
       </div>
 
       {/* 4. Exam Schedule Table */}
-      <div className="border border-slate-300 rounded-xs overflow-hidden mb-3">
+      <div className="border border-slate-300 rounded-xs overflow-hidden mb-3 relative z-10 bg-transparent">
         <table className="w-full border-collapse text-[10.5px] sm:text-[11px] text-left">
           <thead>
-            <tr className="bg-[#0b2545] text-white">
-              <th className="py-1.5 px-2.5 font-bold text-center border-r border-[#1e3a6a] w-[8%]">
+            <tr className="bg-slate-100/70 text-[#0b2545] border-b-2 border-slate-300 font-extrabold uppercase tracking-wider">
+              <th className="py-2 px-2.5 font-extrabold text-center border-r border-slate-300 w-[8%]">
                 S.NO.
               </th>
-              <th className="py-1.5 px-3 font-bold border-r border-[#1e3a6a] w-[46%]">
+              <th className="py-2 px-3 font-extrabold border-r border-slate-300 w-[46%]">
                 SUBJECT NAME
               </th>
-              <th className="py-1.5 px-3 font-bold text-center border-r border-[#1e3a6a] w-[23%]">
+              <th className="py-2 px-3 font-extrabold text-center border-r border-slate-300 w-[23%]">
                 DATE OF EXAM
               </th>
-              <th className="py-1.5 px-3 font-bold text-center w-[23%]">
+              <th className="py-2 px-3 font-extrabold text-center w-[23%]">
                 SHIFT / TIMING
               </th>
             </tr>
@@ -233,7 +245,7 @@ export default function AdmitCardLayout({
               admitCard.subjects.map((subj, index) => (
                 <tr
                   key={subj.subject_code || index}
-                  className={index % 2 === 1 ? "bg-[#f8fafc]" : "bg-white"}
+                  className={index % 2 === 1 ? "bg-slate-50/30" : "bg-transparent"}
                 >
                   <td className="py-1.5 px-2.5 text-center font-semibold text-slate-700 border-r border-slate-200">
                     {index + 1}
@@ -252,7 +264,7 @@ export default function AdmitCardLayout({
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="py-3 text-center text-slate-500 italic">
+                <td colSpan={4} className="py-3 text-center text-slate-500 italic bg-white/40">
                   No subjects scheduled
                 </td>
               </tr>
@@ -262,7 +274,7 @@ export default function AdmitCardLayout({
       </div>
 
       {/* 5. Instructions Card */}
-      <div className="border border-slate-300 rounded-md p-2.5 sm:p-3 mb-4 bg-white">
+      <div className="border border-slate-300 rounded-md p-2.5 sm:p-3 mb-4 bg-white/60 relative z-10">
         <div className="text-[11px] font-bold text-[#8b0000] uppercase tracking-wide mb-1.5">
           IMPORTANT INSTRUCTIONS FOR CANDIDATE / महत्वपूर्ण निर्देश
         </div>
@@ -306,7 +318,7 @@ export default function AdmitCardLayout({
       </div>
 
       {/* 6. Signatures & Seal Section */}
-      <div className="flex items-end justify-between px-2 pt-4 pb-1">
+      <div className="flex items-end justify-between px-2 pt-4 pb-1 relative z-10">
         {/* Student Signature */}
         <div className="text-center w-[180px]">
           <div className="h-[36px]"></div>

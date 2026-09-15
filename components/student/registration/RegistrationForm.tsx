@@ -48,6 +48,7 @@ export default function RegistrationForm({
     registration_no: string;
     candidate_name: string;
     course: string;
+    academic_session?: string;
   } | null>(null);
 
   // Captcha Generator State
@@ -306,6 +307,7 @@ export default function RegistrationForm({
         registration_no: data.registration?.registration_no || "PMBI-REG-CONFIRMED",
         candidate_name: formValues.candidate_name,
         course: formValues.course,
+        academic_session: formValues.academic_session,
       });
       setView("success");
       reset();
@@ -344,7 +346,7 @@ export default function RegistrationForm({
                 National Board for Paramedical & Allied Healthcare Education
               </p>
               <div className="mt-2 inline-block px-3 py-1 bg-slate-100 border border-slate-300 rounded text-xs font-bold text-[#B13B1C] uppercase">
-                Student Online Registration Acknowledgement Receipt (2026-2027)
+                Student Online Registration Acknowledgement Receipt
               </div>
             </div>
 
@@ -383,7 +385,7 @@ export default function RegistrationForm({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Academic Session / शैक्षणिक सत्र:</span>
-                <strong className="text-slate-900">2026-2027</strong>
+                <strong className="text-slate-900">{successData.academic_session || "—"}</strong>
               </div>
               <div className="pt-2 text-slate-600 text-xs border-t border-slate-200 mt-2">
                 ℹ Please preserve this registration number for all future correspondence, admit cards, and verification.
