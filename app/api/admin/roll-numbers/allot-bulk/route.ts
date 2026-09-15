@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const { data: session, error: sessionError } = await supabaseAdmin
     .from("exam_sessions")
-    .select("course_name, session_label, exam_year_label")
+    .select("course_name, session_label, exam_year_label, exam_centers(center_code)")
     .eq("id", session_id)
     .single();
 
@@ -30,12 +30,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Exam session not found" }, { status: 400 });
   }
 
+  const centerCode = (session.exam_centers as unknown as { center_code: string } | null)?.center_code;
+  if (!centerCode) {
+    return NextResponse.json({ error: "Assigned exam center has no center_code set" }, { status: 400 });
+  }
+
   const yearMatch = session.exam_year_label.match(/\d{4}/);
   if (!yearMatch) {
     return NextResponse.json({ error: "Could not extract a 4-digit year from exam_year_label" }, { status: 400 });
   }
   const yearSuffix = yearMatch[0].slice(-2);
-  const prefix = `BPC${yearSuffix}`;
+  const prefix = `${centerCode}${yearSuffix}`;
 
   const { data: existing, error: existingError } = await supabaseAdmin
     .from("student_registrations")
