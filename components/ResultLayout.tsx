@@ -124,7 +124,10 @@ export default function ResultLayout({
         <div className="inline-block px-6 py-1 bg-[#0b2545] text-white font-bold text-xs sm:text-sm tracking-wider uppercase rounded-xs">
           STATEMENT OF MARKS / अंक तालिका
         </div>
-        <p className="text-[10.5px] sm:text-[11px] font-semibold text-slate-700 mt-1 uppercase tracking-wide">
+        <div className="text-[10.5px] sm:text-[11px] font-bold text-[#8b0000] mt-0.5 uppercase tracking-wider">
+          ONLINE RESULT / ऑनलाइन परिणाम
+        </div>
+        <p className="text-[10.5px] sm:text-[11px] font-semibold text-slate-700 mt-0.5 uppercase tracking-wide">
           {result.session_label ? `SESSION: ${result.session_label.toUpperCase()}` : "EXAMINATION SESSION"}{" "}
           {result.exam_year_label ? `• ${result.exam_year_label.toUpperCase()}` : ""}
         </p>
