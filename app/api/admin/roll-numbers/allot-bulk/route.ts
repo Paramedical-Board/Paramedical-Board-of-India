@@ -5,6 +5,18 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getBatchAcademicSessionFromSessionLabel } from "@/lib/course-session-utils";
 import { checkStudentFirstYearPassed } from "@/lib/result-data";
 
+function deriveCollegePrefix(collegeName: string | undefined | null, fallback: string): string {
+  if (!collegeName) return fallback;
+  const namePart = collegeName.split(",")[0].trim();
+  const initials = namePart
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+  return initials || fallback;
+}
+
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_session")?.value;
@@ -35,10 +47,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Assigned exam center has no center_code set" }, { status: 400 });
   }
 
+  const isSecondYear = session.session_label?.includes("2nd Year");
+
   const targetAcademicSession =
     academic_session || getBatchAcademicSessionFromSessionLabel(session.session_label);
 
-  const sessionStr = targetAcademicSession || session.session_label || session.exam_year_label || "2023-2024";
+  const sessionStr = isSecondYear
+    ? (session.session_label || session.exam_year_label || "2024-2025")
+    : (targetAcademicSession || session.session_label || session.exam_year_label || "2023-2024");
   const fullMatch = sessionStr.match(/(\d{4})[^\d]*(\d{2,4})/);
   let sessionDigits = "202324";
   if (fullMatch) {
@@ -59,11 +75,16 @@ export async function POST(req: NextRequest) {
     .select("id, candidate_name, registration_no, college_id, colleges(username, college_code, college_name)")
     .eq("course", session.course_name)
     .eq("status", "approved")
-    .is("roll_no", null)
     .order("created_at", { ascending: true });
 
   if (targetAcademicSession) {
     query = query.eq("academic_session", targetAcademicSession);
+  }
+
+  if (isSecondYear) {
+    query = query.is("roll_no_2nd_year", null);
+  } else {
+    query = query.is("roll_no", null);
   }
 
   const { data: students, error: studentsError } = await query;
@@ -73,10 +94,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (!students || students.length === 0) {
-    return NextResponse.json({ allotted: 0, message: "No eligible students (approved, without roll_no) found for this course and session" });
+    return NextResponse.json({
+      allotted: 0,
+      message: isSecondYear
+        ? "0 students needed roll numbers (all eligible candidates in this batch already have 2nd Year roll numbers)."
+        : "No eligible students (approved, without roll_no) found for this course and session",
+    });
   }
 
-  const isSecondYear = session.session_label?.includes("2nd Year");
   const eligibleStudents = [];
   const skippedStudents = [];
 
@@ -115,16 +140,17 @@ export async function POST(req: NextRequest) {
       seqMap.set(pref, next);
       return next;
     }
+    const rollCol = isSecondYear ? "roll_no_2nd_year" : "roll_no";
     const { data: existing } = await supabaseAdmin
       .from("student_registrations")
-      .select("roll_no")
-      .like("roll_no", `${pref}%`)
-      .order("roll_no", { ascending: false })
+      .select(rollCol)
+      .like(rollCol, `${pref}%`)
+      .order(rollCol, { ascending: false })
       .limit(1);
 
     let start = 1;
-    if (existing && existing.length > 0 && existing[0].roll_no) {
-      const lastSeqStr = existing[0].roll_no.slice(pref.length);
+    if (existing && existing.length > 0 && (existing[0] as any)[rollCol]) {
+      const lastSeqStr = (existing[0] as any)[rollCol].slice(pref.length);
       const lastSeq = parseInt(lastSeqStr, 10);
       if (!isNaN(lastSeq)) {
         start = lastSeq + 1;
@@ -136,25 +162,43 @@ export async function POST(req: NextRequest) {
 
   const results = [];
   for (const student of eligibleStudents) {
-    const college = student.colleges as unknown as { username?: string; college_code?: string } | null;
-    const studentCode = college?.username ? college.username.toUpperCase() : (centerCode || "IPBI");
+    const college = student.colleges as unknown as { username?: string; college_code?: string; college_name?: string } | null;
+    const studentCode = deriveCollegePrefix(college?.college_name, centerCode || "IPBI");
     const prefix = `${studentCode}${sessionDigits}`;
 
     const seq = await getNextSeqForPrefix(prefix);
     const rollNo = `${prefix}${String(seq).padStart(2, "0")}`;
 
-    const { data: updated, error: updateError } = await supabaseAdmin
-      .from("student_registrations")
-      .update({ roll_no: rollNo, exam_session_id: session_id })
-      .eq("id", student.id)
-      .select("id, roll_no, exam_session_id")
-      .single();
+    if (isSecondYear) {
+      // Dedicated 2nd Year fields: leaves 1st Year roll_no and exam_session_id 100% untouched!
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from("student_registrations")
+        .update({
+          roll_no_2nd_year: rollNo,
+          exam_session_id_2nd_year: session_id,
+          admit_card_2nd_year_generated_at: null,
+        })
+        .eq("id", student.id)
+        .select("id, roll_no:roll_no_2nd_year, exam_session_id:exam_session_id_2nd_year")
+        .single();
 
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message, allotted: results.length, results }, { status: 500 });
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message, allotted: results.length, results }, { status: 500 });
+      }
+      results.push(updated);
+    } else {
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from("student_registrations")
+        .update({ roll_no: rollNo, exam_session_id: session_id })
+        .eq("id", student.id)
+        .select("id, roll_no, exam_session_id")
+        .single();
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message, allotted: results.length, results }, { status: 500 });
+      }
+      results.push(updated);
     }
-
-    results.push(updated);
   }
 
   return NextResponse.json({ allotted: results.length, results });

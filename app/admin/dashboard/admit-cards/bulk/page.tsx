@@ -61,6 +61,21 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
     );
   }
 
+  // Resolve target exam session ID if session_label is provided
+  let targetSessionId: string | null = null;
+  if (session_label) {
+    const { data: sessionData } = await supabaseAdmin
+      .from("exam_sessions")
+      .select("id")
+      .eq("course_name", course_name)
+      .eq("session_label", session_label)
+      .maybeSingle();
+
+    if (sessionData?.id) {
+      targetSessionId = sessionData.id;
+    }
+  }
+
   // Fetch approved registrations for this course and session
   let query = supabaseAdmin
     .from("student_registrations")
@@ -69,7 +84,16 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
     .eq("status", "approved")
     .order("created_at", { ascending: true });
 
-  if (academic_session) {
+  const isSecondYear = session_label?.includes("2nd Year") || year_number === "2";
+  const yrNum = isSecondYear ? 2 : 1;
+
+  if (targetSessionId) {
+    if (isSecondYear) {
+      query = query.eq("exam_session_id_2nd_year", targetSessionId);
+    } else {
+      query = query.eq("exam_session_id", targetSessionId);
+    }
+  } else if (academic_session) {
     query = query.eq("academic_session", academic_session);
   } else if (session_label) {
     const resolved = getBatchAcademicSessionFromSessionLabel(session_label);
@@ -97,7 +121,6 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
     );
   }
 
-  const isSecondYear = session_label?.includes("2nd Year") || year_number === "2";
   const admitCards: AdmitCardData[] = [];
   const skipped: { id: string; registration_no: string; candidate_name: string; reason: string }[] = [];
 
@@ -116,7 +139,7 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
         }
       }
 
-      const { data, error } = await getAdmitCardData(reg.id);
+      const { data, error } = await getAdmitCardData(reg.id, yrNum);
       if (error || !data) {
         skipped.push({
           id: reg.id,

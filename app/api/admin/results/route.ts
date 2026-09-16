@@ -42,22 +42,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ students: [], released: false });
   }
 
+  const isSecondYear = sessionLabel?.includes("2nd Year") || yearNumber === "2";
+
   let query = supabaseAdmin
     .from("student_registrations")
-    .select("id, registration_no, candidate_name, roll_no")
+    .select(isSecondYear ? "id, registration_no, candidate_name, roll_no:roll_no_2nd_year" : "id, registration_no, candidate_name, roll_no")
     .eq("course", courseName)
     .eq("status", "approved")
-    .eq("exam_session_id", targetSessionId)
-    .not("admit_card_generated_at", "is", null)
-    .order("roll_no", { ascending: true });
+    .eq(isSecondYear ? "exam_session_id_2nd_year" : "exam_session_id", targetSessionId)
+    .not(isSecondYear ? "admit_card_2nd_year_generated_at" : "admit_card_generated_at", "is", null)
+    .order(isSecondYear ? "roll_no_2nd_year" : "roll_no", { ascending: true });
 
   const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const isSecondYear = sessionLabel?.includes("2nd Year") || yearNumber === "2";
 
   const enrichedStudents = await Promise.all(
     (data ?? []).map(async (st) => {

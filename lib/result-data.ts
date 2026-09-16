@@ -53,11 +53,14 @@ function computeGrade(percentage: number): string {
   return "F";
 }
 
-export async function getResultData(registrationId: string): Promise<ResultDataResult> {
+export async function getResultData(
+  registrationId: string,
+  forceYearNumber?: number
+): Promise<ResultDataResult> {
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select(
-      "registration_no, roll_no, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, exam_session_id, college_id, colleges(college_name, username)"
+      "registration_no, roll_no, roll_no_2nd_year, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, admit_card_2nd_year_generated_at, exam_session_id, exam_session_id_2nd_year, college_id, colleges(college_name, username)"
     )
     .eq("id", registrationId)
     .single();
@@ -70,18 +73,23 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
     return { data: null, error: "Registration is not approved yet" };
   }
 
-  if (!reg.admit_card_generated_at) {
+  const isSecondYear = forceYearNumber === 2;
+  const activeSessionId = isSecondYear ? (reg.exam_session_id_2nd_year || reg.exam_session_id) : reg.exam_session_id;
+  const activeAdmitCardAt = isSecondYear ? (reg.admit_card_2nd_year_generated_at || reg.admit_card_generated_at) : reg.admit_card_generated_at;
+  const activeRollNo = isSecondYear ? (reg.roll_no_2nd_year || reg.roll_no) : reg.roll_no;
+
+  if (!forceYearNumber && !activeAdmitCardAt) {
     return { data: null, error: "Admit card has not been generated for this student yet" };
   }
 
-  if (!reg.exam_session_id) {
+  if (!activeSessionId) {
     return { data: null, error: "Student has not been assigned to an exam session yet" };
   }
 
   const { data: session, error: sessionError } = await supabaseAdmin
     .from("exam_sessions")
     .select("session_label, exam_year_label")
-    .eq("id", reg.exam_session_id)
+    .eq("id", activeSessionId)
     .single();
 
   if (sessionError || !session) {
@@ -96,7 +104,7 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
   const centerName = college?.college_name || "Self Examination Center (Affiliated Institute)";
   const centerCode = college?.username?.toUpperCase() || "IPBI";
 
-  const yearNumber = session.session_label?.includes("2nd Year") ? 2 : 1;
+  const yearNumber = forceYearNumber ?? (session.session_label?.includes("2nd Year") ? 2 : 1);
 
   let { data: subjectRows, error: subjectError } = await supabaseAdmin
     .from("course_subjects")
@@ -213,7 +221,7 @@ export async function getResultData(registrationId: string): Promise<ResultDataR
   return {
     data: {
       registration_no: reg.registration_no,
-      roll_no: reg.roll_no,
+      roll_no: activeRollNo,
       candidate_name: reg.candidate_name,
       father_name: reg.father_name,
       mother_name: reg.mother_name,
@@ -260,15 +268,27 @@ export async function upsertSubjectMarks(
 }
 
 export async function isCourseResultsReleased(courseName: string, sessionId?: string): Promise<boolean> {
+  let isSecondYear = false;
+  if (sessionId) {
+    const { data: session } = await supabaseAdmin
+      .from("exam_sessions")
+      .select("session_label")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (session?.session_label?.includes("2nd Year")) {
+      isSecondYear = true;
+    }
+  }
+
   let query = supabaseAdmin
     .from("student_registrations")
     .select("id")
     .eq("course", courseName)
     .eq("status", "approved")
-    .not("admit_card_generated_at", "is", null);
+    .not(isSecondYear ? "admit_card_2nd_year_generated_at" : "admit_card_generated_at", "is", null);
 
   if (sessionId) {
-    query = query.eq("exam_session_id", sessionId);
+    query = query.eq(isSecondYear ? "exam_session_id_2nd_year" : "exam_session_id", sessionId);
   }
 
   const { data: registrations, error } = await query;
@@ -278,7 +298,7 @@ export async function isCourseResultsReleased(courseName: string, sessionId?: st
   }
 
   for (const reg of registrations) {
-    const { data, error: resultError } = await getResultData(reg.id);
+    const { data, error: resultError } = await getResultData(reg.id, isSecondYear ? 2 : 1);
     if (resultError || !data || data.final_result === "INCOMPLETE") {
       return false;
     }
@@ -290,7 +310,31 @@ export async function isCourseResultsReleased(courseName: string, sessionId?: st
 export async function checkStudentFirstYearPassed(
   registrationId: string
 ): Promise<{ passed: boolean; reason?: string }> {
-  const { data, error } = await getResultData(registrationId);
+  // Look up registration_no to ensure we evaluate 1st-Year marks even if registrationId is a 2nd Year record
+  const { data: reg } = await supabaseAdmin
+    .from("student_registrations")
+    .select("id, registration_no")
+    .eq("id", registrationId)
+    .single();
+
+  let targetId = registrationId;
+  if (reg?.registration_no) {
+    const { data: regList } = await supabaseAdmin
+      .from("student_registrations")
+      .select("id, exam_sessions(session_label)")
+      .eq("registration_no", reg.registration_no)
+      .order("created_at", { ascending: true });
+
+    const firstYearReg = regList?.find(
+      (r: any) => !r.exam_sessions?.session_label?.includes("2nd Year")
+    ) || regList?.[0];
+
+    if (firstYearReg) {
+      targetId = firstYearReg.id;
+    }
+  }
+
+  const { data, error } = await getResultData(targetId, 1);
   if (error || !data) {
     return { passed: false, reason: error || "No result found for 1st Year" };
   }

@@ -23,6 +23,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "course_name is required" }, { status: 400 });
   }
 
+  // Resolve target exam session ID if sessionLabel is provided
+  let targetSessionId: string | null = null;
+  if (sessionLabel) {
+    const { data: sessionData } = await supabaseAdmin
+      .from("exam_sessions")
+      .select("id")
+      .eq("course_name", courseName)
+      .eq("session_label", sessionLabel)
+      .maybeSingle();
+
+    if (sessionData?.id) {
+      targetSessionId = sessionData.id;
+    }
+  }
+
   let query = supabaseAdmin
     .from("student_registrations")
     .select("id, registration_no, candidate_name")
@@ -30,7 +45,11 @@ export async function GET(req: NextRequest) {
     .eq("status", "approved")
     .order("created_at", { ascending: true });
 
-  if (academicSession) {
+  const isSecondYear = sessionLabel?.includes("2nd Year") || yearNumber === "2";
+
+  if (targetSessionId) {
+    query = query.eq(isSecondYear ? "exam_session_id_2nd_year" : "exam_session_id", targetSessionId);
+  } else if (academicSession) {
     query = query.eq("academic_session", academicSession);
   } else if (sessionLabel) {
     const resolved = getBatchAcademicSessionFromSessionLabel(sessionLabel);
@@ -49,7 +68,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ admitCards: [], skipped: [], message: "No approved students found for this course" });
   }
 
-  const isSecondYear = sessionLabel?.includes("2nd Year") || yearNumber === "2";
   const admitCards: AdmitCardData[] = [];
   const skipped: { id: string; registration_no: string; candidate_name: string; reason: string }[] = [];
 
@@ -67,7 +85,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const { data, error } = await getAdmitCardData(reg.id);
+    const { data, error } = await getAdmitCardData(reg.id, isSecondYear ? 2 : 1);
     if (error || !data) {
       skipped.push({
         id: reg.id,

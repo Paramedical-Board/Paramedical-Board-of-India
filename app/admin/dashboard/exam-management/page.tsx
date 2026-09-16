@@ -1924,7 +1924,8 @@ export default function ExamManagementHubPage() {
                 <tbody className="divide-y divide-slate-200 text-slate-800">
                   {resultStudents.map((s, idx) => {
                     const isLocked = activeSessionOption.year_number === 2 && s.first_year_passed === false;
-                    const resultLink = `/admin/dashboard/exam-management/results/${s.id}?returnTab=${activeTab}&course=${encodeURIComponent(selectedCourse)}&session=${encodeURIComponent(selectedSessionKey)}`;
+                    const yearNum = activeSessionOption.year_number || (selectedSessionKey.includes("2nd Year") ? 2 : 1);
+                    const resultLink = `/admin/dashboard/exam-management/results/${s.id}?returnTab=${activeTab}&course=${encodeURIComponent(selectedCourse)}&session=${encodeURIComponent(selectedSessionKey)}&year=${yearNum}`;
 
                     return (
                       <tr

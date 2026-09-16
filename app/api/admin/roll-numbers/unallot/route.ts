@@ -12,15 +12,17 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { registration_id } = body;
+  const { registration_id, year_number } = body;
 
   if (!registration_id) {
     return NextResponse.json({ error: "registration_id is required" }, { status: 400 });
   }
 
+  const isYear2 = year_number === 2 || year_number === "2";
+
   const { data: existing, error: existingError } = await supabaseAdmin
     .from("student_registrations")
-    .select("id, roll_no")
+    .select("id, course, roll_no, roll_no_2nd_year")
     .eq("id", registration_id)
     .maybeSingle();
 
@@ -30,24 +32,56 @@ export async function POST(req: NextRequest) {
   if (!existing) {
     return NextResponse.json({ error: "Registration not found" }, { status: 404 });
   }
-  if (!existing.roll_no) {
-    return NextResponse.json({ error: "This student has no roll number to un-allot" }, { status: 400 });
+
+  const targetRollNo = isYear2 ? existing.roll_no_2nd_year : existing.roll_no;
+  if (!targetRollNo) {
+    return NextResponse.json({ error: "This student has no roll number to un-allot for this year" }, { status: 400 });
   }
 
-  // Delete any entered marks first (they're keyed by registration_id, and this
-  // is a full reset back to "approved, awaiting allotment").
-  const { error: marksDeleteError } = await supabaseAdmin
-    .from("student_subject_marks")
-    .delete()
-    .eq("registration_id", registration_id);
+  // Delete marks for the corresponding year
+  if (isYear2) {
+    const { data: yr2Subjects } = await supabaseAdmin
+      .from("course_subjects")
+      .select("id")
+      .eq("course_name", existing.course)
+      .eq("year_number", 2);
 
-  if (marksDeleteError) {
-    return NextResponse.json({ error: marksDeleteError.message }, { status: 500 });
+    if (yr2Subjects && yr2Subjects.length > 0) {
+      await supabaseAdmin
+        .from("student_subject_marks")
+        .delete()
+        .eq("registration_id", registration_id)
+        .in("subject_id", yr2Subjects.map((s) => s.id));
+    }
+  } else {
+    // 1st year marks
+    const { data: yr1Subjects } = await supabaseAdmin
+      .from("course_subjects")
+      .select("id")
+      .eq("course_name", existing.course)
+      .eq("year_number", 1);
+
+    if (yr1Subjects && yr1Subjects.length > 0) {
+      await supabaseAdmin
+        .from("student_subject_marks")
+        .delete()
+        .eq("registration_id", registration_id)
+        .in("subject_id", yr1Subjects.map((s) => s.id));
+    } else {
+      await supabaseAdmin
+        .from("student_subject_marks")
+        .delete()
+        .eq("registration_id", registration_id);
+    }
   }
+
+  const updateData = isYear2
+    ? { roll_no_2nd_year: null, exam_session_id_2nd_year: null, admit_card_2nd_year_generated_at: null }
+    : { roll_no: null, exam_session_id: null, admit_card_generated_at: null };
 
   const { data, error } = await supabaseAdmin
     .from("student_registrations")
-    .update({ roll_no: null, exam_session_id: null, admit_card_generated_at: null })
+    .update(updateData)
     .eq("id", registration_id)
     .select("id, registration_no, candidate_name, course")
     .single();

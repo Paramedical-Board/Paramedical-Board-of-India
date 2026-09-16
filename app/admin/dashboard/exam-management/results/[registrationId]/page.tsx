@@ -23,7 +23,8 @@ export default async function ResultEntryPage({ params, searchParams }: PageProp
 
   const { registrationId } = await params;
   const sp = searchParams ? await searchParams : {};
-  const { data: resultData, error } = await getResultData(registrationId);
+  const isYear2 = (sp as any).year === "2" || (sp as any).year === 2 || (sp as any).session?.includes("2nd Year");
+  const { data: resultData, error } = await getResultData(registrationId, isYear2 ? 2 : 1);
 
   const returnTab = sp.returnTab || "results";
   const returnCourse = sp.course || resultData?.course || "";

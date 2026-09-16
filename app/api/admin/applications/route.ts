@@ -18,5 +18,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
   }
 
-  return NextResponse.json({ applications: data });
+  // De-duplicate by registration_no so 2nd Year exam records don't show as duplicate applications
+  const seenRegNos = new Set<string>();
+  const uniqueApplications = [];
+  for (const app of data || []) {
+    if (app.registration_no) {
+      if (seenRegNos.has(app.registration_no)) continue;
+      seenRegNos.add(app.registration_no);
+    }
+    uniqueApplications.push(app);
+  }
+
+  return NextResponse.json({ applications: uniqueApplications });
 }

@@ -19,5 +19,16 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: 'Failed to fetch enrolled students' }, { status: 500 });
   }
-  return NextResponse.json({ students: data });
+  // De-duplicate by registration_no so 2nd Year records don't duplicate enrolled list
+  const seenRegNos = new Set<string>();
+  const uniqueStudents = [];
+  for (const st of data || []) {
+    if (st.registration_no) {
+      if (seenRegNos.has(st.registration_no)) continue;
+      seenRegNos.add(st.registration_no);
+    }
+    uniqueStudents.push(st);
+  }
+
+  return NextResponse.json({ students: uniqueStudents });
 }

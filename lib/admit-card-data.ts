@@ -29,11 +29,14 @@ export interface AdmitCardResult {
   error: string | null;
 }
 
-export async function getAdmitCardData(registrationId: string): Promise<AdmitCardResult> {
+export async function getAdmitCardData(
+  registrationId: string,
+  yearNumberParam?: number
+): Promise<AdmitCardResult> {
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select(
-      "registration_no, roll_no, candidate_name, father_name, dob, course, photo_url, status, admit_card_generated_at, exam_session_id, college_id, colleges(college_name, username)"
+      "registration_no, roll_no, roll_no_2nd_year, candidate_name, father_name, dob, course, photo_url, status, admit_card_generated_at, admit_card_2nd_year_generated_at, exam_session_id, exam_session_id_2nd_year, college_id, colleges(college_name, username)"
     )
     .eq("id", registrationId)
     .single();
@@ -46,18 +49,22 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
     return { data: null, error: "Registration is not approved yet" };
   }
 
-  if (!reg.roll_no) {
-    return { data: null, error: "Roll number has not been allotted yet" };
+  const isYear2 = yearNumberParam === 2;
+  const activeRollNo = isYear2 ? ((reg as any).roll_no_2nd_year || reg.roll_no) : reg.roll_no;
+  const activeSessionId = isYear2 ? ((reg as any).exam_session_id_2nd_year || reg.exam_session_id) : reg.exam_session_id;
+
+  if (!activeRollNo) {
+    return { data: null, error: isYear2 ? "2nd Year Roll number has not been allotted yet" : "Roll number has not been allotted yet" };
   }
 
-  if (!reg.exam_session_id) {
-    return { data: null, error: "Student has not been assigned to an exam session yet" };
+  if (!activeSessionId) {
+    return { data: null, error: isYear2 ? "Student has not been assigned to a 2nd Year exam session yet" : "Student has not been assigned to an exam session yet" };
   }
 
   const { data: session, error: sessionError } = await supabaseAdmin
     .from("exam_sessions")
     .select("session_label, exam_year_label")
-    .eq("id", reg.exam_session_id)
+    .eq("id", activeSessionId)
     .single();
 
   if (sessionError || !session) {
@@ -106,7 +113,7 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
     .from("datesheets")
     .select("subject_id, exam_date, exam_time")
     .in("subject_id", subjectIds)
-    .eq("exam_session_id", reg.exam_session_id);
+    .eq("exam_session_id", activeSessionId);
 
   if (dateError) {
     return { data: null, error: dateError.message };
@@ -134,22 +141,25 @@ export async function getAdmitCardData(registrationId: string): Promise<AdmitCar
   });
 
   // Mark admit card as generated, first time only — never overwrite an existing timestamp.
-  if (!reg.admit_card_generated_at) {
+  const genAtField = isYear2 ? "admit_card_2nd_year_generated_at" : "admit_card_generated_at";
+  const genAtVal = isYear2 ? (reg as any).admit_card_2nd_year_generated_at : reg.admit_card_generated_at;
+
+  if (!genAtVal) {
     const { error: markError } = await supabaseAdmin
       .from("student_registrations")
-      .update({ admit_card_generated_at: new Date().toISOString() })
+      .update({ [genAtField]: new Date().toISOString() })
       .eq("id", registrationId)
-      .is("admit_card_generated_at", null);
+      .is(genAtField, null);
 
     if (markError) {
-      console.error("Failed to set admit_card_generated_at:", markError.message);
+      console.error(`Failed to set ${genAtField}:`, markError.message);
     }
   }
 
   return {
     data: {
       registration_no: reg.registration_no,
-      roll_no: reg.roll_no,
+      roll_no: activeRollNo,
       candidate_name: reg.candidate_name,
       father_name: reg.father_name,
       dob: reg.dob,
