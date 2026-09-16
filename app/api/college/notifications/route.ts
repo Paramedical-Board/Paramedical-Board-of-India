@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('registration_queries')
-    .select('*, student_registrations!inner(college_id, registration_no, candidate_name)')
+    .select('*, student_registrations!inner(college_id, enrollment_no, candidate_name)')
     .eq('student_registrations.college_id', session.college_id)
     .eq('status', 'open')
     .order('created_at', { ascending: false });
@@ -20,5 +20,19 @@ export async function GET(request: NextRequest) {
     console.error('Notifications fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
   }
-  return NextResponse.json({ notifications: data });
+
+  const notifications = (data || []).map((notif: any) => {
+    const student = notif.student_registrations;
+    const enr = student?.enrollment_no || student?.registration_no;
+    return {
+      ...notif,
+      student_registrations: student ? {
+        ...student,
+        enrollment_no: enr,
+        registration_no: enr,
+      } : student,
+    };
+  });
+
+  return NextResponse.json({ notifications });
 }

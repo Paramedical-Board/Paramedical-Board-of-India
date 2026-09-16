@@ -594,7 +594,7 @@ export default function AdminCollegesPage() {
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wide w-28">College Code:</span>
                     <span className="text-sm font-mono font-bold text-[#143E66]">{activeCredentials.college_code}</span>
                   </div>
-                  <span className="text-[11px] text-slate-500 italic">Used in Registration No</span>
+                  <span className="text-[11px] text-slate-500 italic">Used in Enrollment No</span>
                 </div>
               )}
 

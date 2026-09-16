@@ -21,7 +21,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (error || !data) {
     return NextResponse.json({ error: 'Application not found' }, { status: 404 });
   }
-  return NextResponse.json({ registration: data });
+  const enr = (data as any).enrollment_no || (data as any).registration_no;
+  return NextResponse.json({
+    registration: {
+      ...data,
+      enrollment_no: enr,
+      registration_no: enr,
+    },
+  });
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

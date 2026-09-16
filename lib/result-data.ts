@@ -18,7 +18,8 @@ export interface ResultSubject {
 }
 
 export interface ResultData {
-  registration_no: string;
+  enrollment_no: string;
+  registration_no?: string; // fallback alias
   roll_no: string;
   candidate_name: string;
   father_name: string;
@@ -60,7 +61,7 @@ export async function getResultData(
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select(
-      "registration_no, roll_no, roll_no_2nd_year, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, admit_card_2nd_year_generated_at, exam_session_id, exam_session_id_2nd_year, college_id, colleges(college_name, username)"
+      "enrollment_no, roll_no, roll_no_2nd_year, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, admit_card_2nd_year_generated_at, exam_session_id, exam_session_id_2nd_year, college_id, colleges(college_name, username)"
     )
     .eq("id", registrationId)
     .single();
@@ -220,7 +221,8 @@ export async function getResultData(
 
   return {
     data: {
-      registration_no: reg.registration_no,
+      enrollment_no: (reg as any).enrollment_no || (reg as any).registration_no,
+      registration_no: (reg as any).enrollment_no || (reg as any).registration_no,
       roll_no: activeRollNo,
       candidate_name: reg.candidate_name,
       father_name: reg.father_name,
@@ -310,19 +312,20 @@ export async function isCourseResultsReleased(courseName: string, sessionId?: st
 export async function checkStudentFirstYearPassed(
   registrationId: string
 ): Promise<{ passed: boolean; reason?: string }> {
-  // Look up registration_no to ensure we evaluate 1st-Year marks even if registrationId is a 2nd Year record
+  // Look up enrollment_no to ensure we evaluate 1st-Year marks even if registrationId is a 2nd Year record
   const { data: reg } = await supabaseAdmin
     .from("student_registrations")
-    .select("id, registration_no")
+    .select("id, enrollment_no")
     .eq("id", registrationId)
     .single();
 
   let targetId = registrationId;
-  if (reg?.registration_no) {
+  const enrNo = (reg as any)?.enrollment_no || (reg as any)?.registration_no;
+  if (enrNo) {
     const { data: regList } = await supabaseAdmin
       .from("student_registrations")
       .select("id, exam_sessions(session_label)")
-      .eq("registration_no", reg.registration_no)
+      .eq("enrollment_no", enrNo)
       .order("created_at", { ascending: true });
 
     const firstYearReg = regList?.find(

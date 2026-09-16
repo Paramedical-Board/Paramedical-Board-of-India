@@ -163,11 +163,11 @@ export default function ResultLayout({
               <span className="text-[#0b2545] font-bold uppercase">{result.father_name || "—"}</span>
             </div>
 
-            {/* Registration No. */}
+            {/* Enrollment No. */}
             <div className="flex items-baseline">
-              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Registration No.</span>
+              <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Enrollment No.</span>
               <span className="text-slate-600 font-semibold mr-1.5">:</span>
-              <span className="text-[#0b2545] font-bold font-mono">{result.registration_no || "—"}</span>
+              <span className="text-[#0b2545] font-bold font-mono">{result.enrollment_no || result.registration_no || "—"}</span>
             </div>
 
             {/* Mother's Name */}

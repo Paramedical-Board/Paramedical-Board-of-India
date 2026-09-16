@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("student_registrations")
-    .select(isSecondYear ? "id, registration_no, candidate_name, roll_no:roll_no_2nd_year" : "id, registration_no, candidate_name, roll_no")
+    .select(isSecondYear ? "id, enrollment_no, candidate_name, roll_no:roll_no_2nd_year" : "id, enrollment_no, candidate_name, roll_no")
     .eq("course", courseName)
     .eq("status", "approved")
     .eq(isSecondYear ? "exam_session_id_2nd_year" : "exam_session_id", targetSessionId)

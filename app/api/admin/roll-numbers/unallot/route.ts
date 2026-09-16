@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     .from("student_registrations")
     .update(updateData)
     .eq("id", registration_id)
-    .select("id, registration_no, candidate_name, course")
+    .select("id, enrollment_no, candidate_name, course")
     .single();
 
   if (error) {

@@ -35,5 +35,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     .eq('registration_id', id)
     .order('created_at', { ascending: false });
 
+  const enr = registration.enrollment_no || registration.registration_no;
+  registration.enrollment_no = enr;
+  registration.registration_no = enr;
+
   return NextResponse.json({ registration, queries: queries ?? [] });
 }

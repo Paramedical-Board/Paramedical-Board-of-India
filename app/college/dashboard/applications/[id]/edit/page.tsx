@@ -118,7 +118,7 @@ export default function CollegeEditApplicationPage({
                 Edit & Resubmit Application / आवेदन संशोधन एवं पुनः प्रस्तुति
               </h1>
               <p className="text-xs sm:text-sm text-[#C2DCED] mt-0.5 font-medium">
-                Reg No: <span className="font-mono font-bold text-white">{registration.registration_no}</span> • Candidate: <span className="font-bold text-white">{registration.candidate_name}</span>
+                Enrollment No: <span className="font-mono font-bold text-white">{registration.enrollment_no || registration.registration_no}</span> • Candidate: <span className="font-bold text-white">{registration.candidate_name}</span>
               </p>
             </div>
 

@@ -79,7 +79,7 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
   // Fetch approved registrations for this course and session
   let query = supabaseAdmin
     .from("student_registrations")
-    .select("id, registration_no, candidate_name")
+    .select("id, enrollment_no, candidate_name")
     .eq("course", course_name)
     .eq("status", "approved")
     .order("created_at", { ascending: true });
@@ -106,32 +106,27 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
 
   if (regError) {
     return (
-      <div className="flex-1 max-w-2xl w-full mx-auto px-4 py-16 text-center">
-        <div className="bg-white border border-red-200 rounded-lg p-8 shadow-sm">
-          <h2 className="text-lg font-bold text-red-700 mb-2">Error Loading Registrations</h2>
-          <p className="text-sm text-slate-600 mb-6">{regError.message}</p>
-          <Link
-            href="/admin/dashboard"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#143E66] text-white text-xs font-bold rounded transition-colors"
-          >
-            ← Back to Applications
-          </Link>
+      <div className="p-8 max-w-4xl mx-auto">
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          Failed to load students: {regError.message}
         </div>
       </div>
     );
   }
 
   const admitCards: AdmitCardData[] = [];
-  const skipped: { id: string; registration_no: string; candidate_name: string; reason: string }[] = [];
+  const skipped: { id: string; enrollment_no?: string; registration_no?: string; candidate_name: string; reason: string }[] = [];
 
   if (registrations && registrations.length > 0) {
-    for (const reg of registrations) {
+    for (const reg of (registrations as any[])) {
+      const enr = reg.enrollment_no || reg.registration_no;
       if (isSecondYear) {
         const check = await checkStudentFirstYearPassed(reg.id);
         if (!check.passed) {
           skipped.push({
             id: reg.id,
-            registration_no: reg.registration_no,
+            enrollment_no: enr,
+            registration_no: enr,
             candidate_name: reg.candidate_name,
             reason: check.reason || "1st Year examination not cleared / pending",
           });
@@ -143,7 +138,8 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
       if (error || !data) {
         skipped.push({
           id: reg.id,
-          registration_no: reg.registration_no,
+          enrollment_no: enr,
+          registration_no: enr,
           candidate_name: reg.candidate_name,
           reason: error ?? "Unknown error",
         });
@@ -220,7 +216,7 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
               <table className="w-full text-left text-xs bg-white rounded border border-amber-200">
                 <thead>
                   <tr className="bg-amber-100/70 text-amber-900 text-[11px] uppercase border-b border-amber-200">
-                    <th className="py-2 px-3 font-bold">Reg. No</th>
+                    <th className="py-2 px-3 font-bold">Enrollment No</th>
                     <th className="py-2 px-3 font-bold">Candidate Name</th>
                     <th className="py-2 px-3 font-bold">Reason</th>
                   </tr>
@@ -228,7 +224,7 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
                 <tbody className="divide-y divide-amber-100 text-[11.5px]">
                   {skipped.map((s) => (
                     <tr key={s.id}>
-                      <td className="py-2 px-3 font-mono font-bold text-[#143E66]">{s.registration_no}</td>
+                      <td className="py-2 px-3 font-mono font-bold text-[#143E66]">{s.enrollment_no || s.registration_no}</td>
                       <td className="py-2 px-3 font-semibold text-slate-800">{s.candidate_name}</td>
                       <td className="py-2 px-3 text-red-600 font-medium">{s.reason}</td>
                     </tr>
@@ -280,7 +276,7 @@ export default async function BulkAdmitCardsPage({ searchParams }: BulkPageProps
         <div className="bulk-admit-cards-container space-y-8 print:space-y-0">
           {admitCards.map((admitCard, index) => (
             <div
-              key={admitCard.registration_no || index}
+              key={admitCard.enrollment_no || admitCard.registration_no || index}
               className="admit-card-item-wrapper break-after-page"
               style={{
                 pageBreakAfter: "always",

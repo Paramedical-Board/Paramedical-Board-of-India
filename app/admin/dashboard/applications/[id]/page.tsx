@@ -16,7 +16,8 @@ interface QueryItem {
 
 interface RegistrationData {
   id: string;
-  registration_no: string;
+  enrollment_no?: string;
+  registration_no?: string;
   candidate_name: string;
   father_name: string;
   mother_name: string;
@@ -270,7 +271,7 @@ export default function AdminApplicationDetailPage({
               Applications
             </Link>
             <span>/</span>
-            <span className="font-mono font-bold text-[#143E66]">{registration.registration_no}</span>
+            <span className="font-mono font-bold text-[#143E66]">{registration.enrollment_no || registration.registration_no}</span>
           </nav>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-black text-[#00031D] tracking-tight">

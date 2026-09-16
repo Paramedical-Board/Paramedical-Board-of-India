@@ -52,7 +52,8 @@ interface ExamSession {
 
 interface ResultStudentItem {
   id: string;
-  registration_no: string;
+  enrollment_no?: string;
+  registration_no?: string;
   candidate_name: string;
   roll_no: string;
   first_year_passed?: boolean;
@@ -1916,7 +1917,7 @@ export default function ExamManagementHubPage() {
                   <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 uppercase text-[11px]">
                     <th className="py-3 px-4 w-12 text-center">#</th>
                     <th className="py-3 px-4">Roll Number</th>
-                    <th className="py-3 px-4">Registration No.</th>
+                    <th className="py-3 px-4">Enrollment No.</th>
                     <th className="py-3 px-4">Candidate Name</th>
                     <th className="py-3 px-4 text-right">Action</th>
                   </tr>
@@ -1941,7 +1942,7 @@ export default function ExamManagementHubPage() {
                       >
                         <td className="py-3 px-4 text-center font-bold text-slate-500">{idx + 1}</td>
                         <td className="py-3 px-4 font-mono font-bold text-[#143E66]">{s.roll_no || "—"}</td>
-                        <td className="py-3 px-4 font-mono text-slate-700">{s.registration_no}</td>
+                        <td className="py-3 px-4 font-mono text-slate-700">{s.enrollment_no || s.registration_no}</td>
                         <td className="py-3 px-4 font-bold text-slate-900 group-hover:text-[#143E66]">
                           <div className="flex items-center gap-2">
                             <span>{s.candidate_name}</span>

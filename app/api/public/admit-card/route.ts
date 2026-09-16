@@ -4,11 +4,12 @@ import { getAdmitCardData } from "@/lib/admit-card-data";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { registration_no, date_of_birth, year } = body;
+  const enrollment_no = (body.enrollment_no || body.registration_no || "").trim();
+  const { date_of_birth, year } = body;
 
-  if (!registration_no || !date_of_birth) {
+  if (!enrollment_no || !date_of_birth) {
     return NextResponse.json(
-      { error: "Registration Number and Date of Birth are both required" },
+      { error: "Enrollment Number and Date of Birth are both required" },
       { status: 400 }
     );
   }
@@ -19,13 +20,13 @@ export async function POST(req: NextRequest) {
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select("id, exam_session_id, exam_session_id_2nd_year, roll_no, roll_no_2nd_year, admit_card_generated_at, admit_card_2nd_year_generated_at")
-    .eq("registration_no", registration_no)
+    .eq("enrollment_no", enrollment_no)
     .eq("dob", date_of_birth)
     .maybeSingle();
 
   if (regError || !reg) {
     return NextResponse.json(
-      { error: "Invalid registration number or date of birth" },
+      { error: "Invalid enrollment number or date of birth" },
       { status: 404 }
     );
   }

@@ -6,7 +6,8 @@ import StatusBadge from "@/components/common/StatusBadge";
 
 interface CollegeApplicationItem {
   id: string;
-  registration_no: string;
+  enrollment_no?: string;
+  registration_no?: string;
   candidate_name: string;
   course: string;
   status: string;
@@ -24,20 +25,12 @@ export default function CollegeApplicationsListPage() {
 
   const fetchApplications = async () => {
     try {
-      setLoading(true);
-      setError(null);
       const res = await fetch("/api/college/applications");
+      if (!res.ok) throw new Error("Failed to fetch applications");
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Failed to load applications.");
-        return;
-      }
-
       setApplications(data.applications || []);
-    } catch (err) {
-      console.error("Fetch college apps error:", err);
-      setError("Network error while loading applications.");
+    } catch (err: any) {
+      setError(err.message || "Failed to load applications");
     } finally {
       setLoading(false);
     }
@@ -47,6 +40,16 @@ export default function CollegeApplicationsListPage() {
     fetchApplications();
   }, []);
 
+  const stats = useMemo(() => {
+    const total = applications.length;
+    const submitted = applications.filter((a) => a.status === "submitted").length;
+    const underReview = applications.filter((a) => a.status === "under_review").length;
+    const queries = applications.filter((a) => a.status === "query_raised").length;
+    const approved = applications.filter((a) => a.status === "approved").length;
+    const rejected = applications.filter((a) => a.status === "rejected").length;
+    return { total, submitted, underReview, queries, approved, rejected };
+  }, [applications]);
+
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
       const matchesStatus =
@@ -54,7 +57,7 @@ export default function CollegeApplicationsListPage() {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
-        app.registration_no?.toLowerCase().includes(q) ||
+        (app.enrollment_no || app.registration_no)?.toLowerCase().includes(q) ||
         app.candidate_name?.toLowerCase().includes(q) ||
         app.course?.toLowerCase().includes(q);
 
@@ -183,7 +186,7 @@ export default function CollegeApplicationsListPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#143E66] text-white text-xs uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-3.5 px-4 font-bold">Registration No</th>
+                  <th className="py-3.5 px-4 font-bold">Enrollment No</th>
                   <th className="py-3.5 px-4 font-bold">Candidate Name</th>
                   <th className="py-3.5 px-4 font-bold">Course</th>
                   <th className="py-3.5 px-4 font-bold">Submitted Date</th>
@@ -203,7 +206,7 @@ export default function CollegeApplicationsListPage() {
                       }`}
                     >
                       <td className="py-3.5 px-4 font-mono font-bold text-[#143E66] whitespace-nowrap">
-                        {app.registration_no}
+                        {app.enrollment_no || app.registration_no}
                       </td>
                       <td className="py-3.5 px-4 font-bold text-slate-900">
                         {app.candidate_name}

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('student_registrations')
-    .select('id, registration_no, candidate_name, course, created_at')
+    .select('id, enrollment_no, candidate_name, course, created_at')
     .eq('college_id', session.college_id)
     .eq('status', 'approved')
     .order('created_at', { ascending: false });
@@ -19,15 +19,20 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: 'Failed to fetch enrolled students' }, { status: 500 });
   }
-  // De-duplicate by registration_no so 2nd Year records don't duplicate enrolled list
-  const seenRegNos = new Set<string>();
+  // De-duplicate by enrollment_no so 2nd Year records don't duplicate enrolled list
+  const seenEnrNos = new Set<string>();
   const uniqueStudents = [];
-  for (const st of data || []) {
-    if (st.registration_no) {
-      if (seenRegNos.has(st.registration_no)) continue;
-      seenRegNos.add(st.registration_no);
+  for (const st of (data as any) || []) {
+    const enr = st.enrollment_no || st.registration_no;
+    if (enr) {
+      if (seenEnrNos.has(enr)) continue;
+      seenEnrNos.add(enr);
     }
-    uniqueStudents.push(st);
+    uniqueStudents.push({
+      ...st,
+      enrollment_no: enr,
+      registration_no: enr,
+    });
   }
 
   return NextResponse.json({ students: uniqueStudents });

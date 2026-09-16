@@ -24,7 +24,7 @@ export default function PublicAdmitCardLookupPage() {
     const trimmedDob = dateOfBirth.trim();
 
     if (!trimmedReg || !trimmedDob) {
-      setError("Please provide both Registration Number and Date of Birth.");
+      setError("Please provide both Enrollment Number and Date of Birth.");
       return;
     }
 
@@ -37,6 +37,7 @@ export default function PublicAdmitCardLookupPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          enrollment_no: trimmedReg,
           registration_no: trimmedReg,
           date_of_birth: trimmedDob,
           year,
@@ -173,13 +174,13 @@ export default function PublicAdmitCardLookupPage() {
                   </div>
                 )}
 
-                {/* Registration Number Field */}
+                {/* Enrollment Number Field */}
                 <div>
                   <label
-                    htmlFor="registration_no"
+                    htmlFor="enrollment_no"
                     className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
                   >
-                    Registration Number / पंजीकरण संख्या <span className="text-red-500">*</span>
+                    Enrollment Number / नामांकन संख्या <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -198,17 +199,17 @@ export default function PublicAdmitCardLookupPage() {
                       </svg>
                     </div>
                     <input
-                      id="registration_no"
+                      id="enrollment_no"
                       type="text"
                       required
                       value={registrationNo}
                       onChange={(e) => setRegistrationNo(e.target.value)}
-                      placeholder="e.g. PM20245015769"
+                      placeholder="e.g. IPMB012401"
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#143E66] focus:border-transparent transition-all uppercase"
                     />
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Enter the registration number given during enrollment.
+                    Enter your enrollment number (e.g. IPMB...).
                   </p>
                 </div>
 

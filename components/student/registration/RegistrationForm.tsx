@@ -45,7 +45,8 @@ export default function RegistrationForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitErrorDetails, setSubmitErrorDetails] = useState<Record<string, any> | null>(null);
   const [successData, setSuccessData] = useState<{
-    registration_no: string;
+    enrollment_no: string;
+    registration_no?: string;
     candidate_name: string;
     course: string;
     academic_session?: string;
@@ -303,8 +304,10 @@ export default function RegistrationForm({
       }
 
       // Success
+      const enr = data.registration?.enrollment_no || data.registration?.registration_no || "PMBI-REG-CONFIRMED";
       setSuccessData({
-        registration_no: data.registration?.registration_no || "PMBI-REG-CONFIRMED",
+        enrollment_no: enr,
+        registration_no: enr,
         candidate_name: formValues.candidate_name,
         course: formValues.course,
         academic_session: formValues.academic_session,
@@ -364,13 +367,13 @@ export default function RegistrationForm({
               Your registration application has been submitted successfully to the Indian Paramedical Board of India.
             </p>
 
-            {/* Prominent Registration Number Box */}
+            {/* Prominent Enrollment Number Box */}
             <div className="w-full p-5 bg-[#EBF4FA] border-2 border-[#143E66] rounded-lg text-center mb-6 print:bg-white print:border-2 print:border-slate-800 print:py-3 print:mb-4">
               <span className="text-xs font-bold text-[#143E66] uppercase tracking-wider block mb-1">
-                Your Official Registration Number / आपका पंजीकरण क्रमांक
+                Your Official Enrollment Number / आपका नामांकन संख्या
               </span>
               <span className="text-xl sm:text-3xl font-black text-[#B13B1C] font-mono tracking-wide">
-                {successData.registration_no}
+                {successData.enrollment_no || successData.registration_no}
               </span>
             </div>
 

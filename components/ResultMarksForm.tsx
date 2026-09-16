@@ -348,7 +348,7 @@ export default function ResultMarksForm({
                     Roll No: <strong className="font-mono text-slate-900">{resultData.roll_no || "N/A"}</strong>
                   </div>
                   <div>
-                    Reg No: <strong className="font-mono text-slate-900">{resultData.registration_no}</strong>
+                    Enrollment No: <strong className="font-mono text-slate-900">{resultData.enrollment_no || resultData.registration_no}</strong>
                   </div>
                   <div className="col-span-2 text-slate-700 font-semibold truncate">
                     Course: {resultData.course}

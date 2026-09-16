@@ -6,7 +6,8 @@ import StatusBadge from "@/components/common/StatusBadge";
 
 interface ApplicationItem {
   id: string;
-  registration_no: string;
+  enrollment_no?: string;
+  registration_no?: string;
   candidate_name: string;
   course: string;
   status: string;
@@ -61,7 +62,7 @@ export default function AdminApplicationsDashboardPage() {
       const collegeName = app.colleges?.college_name?.toLowerCase() || "";
       const matchesSearch =
         !q ||
-        app.registration_no?.toLowerCase().includes(q) ||
+        (app.enrollment_no || app.registration_no)?.toLowerCase().includes(q) ||
         app.candidate_name?.toLowerCase().includes(q) ||
         app.course?.toLowerCase().includes(q) ||
         collegeName.includes(q);
@@ -286,7 +287,7 @@ export default function AdminApplicationsDashboardPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#143E66] text-white text-xs uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-3.5 px-4 font-bold">Registration No</th>
+                  <th className="py-3.5 px-4 font-bold">Enrollment No</th>
                   <th className="py-3.5 px-4 font-bold">Candidate Name</th>
                   <th className="py-3.5 px-4 font-bold">College / Institution</th>
                   <th className="py-3.5 px-4 font-bold">Course</th>
@@ -302,7 +303,7 @@ export default function AdminApplicationsDashboardPage() {
                     className="hover:bg-amber-50/40 transition-colors"
                   >
                     <td className="py-3.5 px-4 font-mono font-bold text-[#143E66] whitespace-nowrap">
-                      {app.registration_no}
+                      {app.enrollment_no || app.registration_no}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">
                       {app.candidate_name}

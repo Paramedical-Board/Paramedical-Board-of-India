@@ -6,7 +6,8 @@ import StatusBadge from "@/components/common/StatusBadge";
 
 interface EnrolledStudent {
   id: string;
-  registration_no: string;
+  enrollment_no?: string;
+  registration_no?: string;
   candidate_name: string;
   course: string;
   created_at: string;
@@ -23,17 +24,12 @@ export default function CollegeEnrolledStudentsPage() {
       setLoading(true);
       setError(null);
       const res = await fetch("/api/college/enrolled");
+      if (!res.ok) throw new Error("Failed to fetch enrolled students");
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Failed to load enrolled students.");
-        return;
-      }
-
       setStudents(data.students || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Fetch enrolled error:", err);
-      setError("Network error while loading enrolled students.");
+      setError(err.message || "Failed to load enrolled candidates");
     } finally {
       setLoading(false);
     }
@@ -48,7 +44,7 @@ export default function CollegeEnrolledStudentsPage() {
     if (!q) return students;
     return students.filter(
       (s) =>
-        s.registration_no?.toLowerCase().includes(q) ||
+        (s.enrollment_no || s.registration_no)?.toLowerCase().includes(q) ||
         s.candidate_name?.toLowerCase().includes(q) ||
         s.course?.toLowerCase().includes(q)
     );
@@ -162,7 +158,7 @@ export default function CollegeEnrolledStudentsPage() {
               <thead>
                 <tr className="bg-[#143E66] text-white text-xs uppercase tracking-wider border-b border-slate-200 print:bg-slate-800">
                   <th className="py-3 px-4 font-bold">#</th>
-                  <th className="py-3 px-4 font-bold">Registration No</th>
+                  <th className="py-3 px-4 font-bold">Enrollment No</th>
                   <th className="py-3 px-4 font-bold">Candidate Name</th>
                   <th className="py-3 px-4 font-bold">Enrolled Course</th>
                   <th className="py-3 px-4 font-bold">Admission Date</th>
@@ -174,7 +170,7 @@ export default function CollegeEnrolledStudentsPage() {
                   <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-4 text-slate-400 font-mono text-xs">{idx + 1}</td>
                     <td className="py-3 px-4 font-mono font-bold text-[#143E66] whitespace-nowrap">
-                      {student.registration_no}
+                      {student.enrollment_no || student.registration_no}
                     </td>
                     <td className="py-3 px-4 font-bold text-slate-900">
                       {student.candidate_name}

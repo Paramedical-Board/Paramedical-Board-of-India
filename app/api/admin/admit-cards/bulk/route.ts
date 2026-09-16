@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("student_registrations")
-    .select("id, registration_no, candidate_name")
+    .select("id, enrollment_no, candidate_name")
     .eq("course", courseName)
     .eq("status", "approved")
     .order("created_at", { ascending: true });
@@ -69,15 +69,17 @@ export async function GET(req: NextRequest) {
   }
 
   const admitCards: AdmitCardData[] = [];
-  const skipped: { id: string; registration_no: string; candidate_name: string; reason: string }[] = [];
+  const skipped: { id: string; enrollment_no: string; registration_no: string; candidate_name: string; reason: string }[] = [];
 
-  for (const reg of registrations) {
+  for (const reg of (registrations as any[])) {
+    const enr = reg.enrollment_no || reg.registration_no;
     if (isSecondYear) {
       const check = await checkStudentFirstYearPassed(reg.id);
       if (!check.passed) {
         skipped.push({
           id: reg.id,
-          registration_no: reg.registration_no,
+          enrollment_no: enr,
+          registration_no: enr,
           candidate_name: reg.candidate_name,
           reason: check.reason || "1st Year examination not cleared",
         });
@@ -89,7 +91,8 @@ export async function GET(req: NextRequest) {
     if (error || !data) {
       skipped.push({
         id: reg.id,
-        registration_no: reg.registration_no,
+        enrollment_no: enr,
+        registration_no: enr,
         candidate_name: reg.candidate_name,
         reason: error ?? "Unknown error",
       });

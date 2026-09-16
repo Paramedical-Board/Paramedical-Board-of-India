@@ -13,7 +13,8 @@ interface NotificationQuery {
   resolved_at?: string | null;
   student_registrations?: {
     college_id: string;
-    registration_no: string;
+    enrollment_no?: string;
+    registration_no?: string;
     candidate_name: string;
   } | null;
 }
@@ -120,7 +121,7 @@ export default function CollegeNotificationsPage() {
         ) : (
           <div className="divide-y divide-slate-200">
             {notifications.map((notif) => {
-              const regNo = notif.student_registrations?.registration_no || "Registration";
+              const regNo = notif.student_registrations?.enrollment_no || notif.student_registrations?.registration_no || "Enrollment";
               const candidateName = notif.student_registrations?.candidate_name || "Student";
 
               return (

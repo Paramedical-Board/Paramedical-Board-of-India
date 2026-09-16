@@ -88,7 +88,7 @@ export default async function ResultEntryPage({ params, searchParams }: PageProp
           </span>
           <span className="text-slate-300 hidden sm:inline">•</span>
           <span className="text-xs text-slate-500 font-mono hidden sm:inline">
-            Reg No: <strong className="text-slate-900">{resultData.registration_no}</strong>
+            Enrollment No: <strong className="text-slate-900">{resultData.enrollment_no || resultData.registration_no}</strong>
           </span>
         </div>
 

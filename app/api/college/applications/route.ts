@@ -11,12 +11,19 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('student_registrations')
-    .select('id, registration_no, candidate_name, course, status, created_at')
+    .select('id, enrollment_no, candidate_name, course, status, created_at')
     .eq('college_id', session.college_id)
     .order('created_at', { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
   }
-  return NextResponse.json({ applications: data });
+
+  const applications = (data || []).map((app: any) => ({
+    ...app,
+    enrollment_no: app.enrollment_no || app.registration_no,
+    registration_no: app.enrollment_no || app.registration_no,
+  }));
+
+  return NextResponse.json({ applications });
 }

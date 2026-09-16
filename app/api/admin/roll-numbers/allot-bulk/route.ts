@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("student_registrations")
-    .select("id, candidate_name, registration_no, college_id, colleges(username, college_code, college_name)")
+    .select("id, candidate_name, enrollment_no, college_id, colleges(username, college_code, college_name)")
     .eq("course", session.course_name)
     .eq("status", "approved")
     .order("created_at", { ascending: true });
@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
       if (!check.passed) {
         skippedStudents.push({
           id: student.id,
-          registration_no: student.registration_no,
+          enrollment_no: (student as any).enrollment_no || (student as any).registration_no,
+          registration_no: (student as any).enrollment_no || (student as any).registration_no,
           candidate_name: student.candidate_name,
           reason: check.reason || "1st Year result not cleared",
         });

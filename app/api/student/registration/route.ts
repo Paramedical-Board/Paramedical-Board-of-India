@@ -60,21 +60,21 @@ export async function POST(request: NextRequest) {
     // Get next sequence for this college and session
     const { data: latestReg } = await supabaseAdmin
       .from('student_registrations')
-      .select('registration_no')
-      .like('registration_no', `${prefix}%`)
-      .order('registration_no', { ascending: false })
+      .select('enrollment_no')
+      .like('enrollment_no', `${prefix}%`)
+      .order('enrollment_no', { ascending: false })
       .limit(1);
 
     let nextSeq = 1;
-    if (latestReg && latestReg.length > 0 && latestReg[0].registration_no) {
-      const lastSeqStr = latestReg[0].registration_no.slice(prefix.length);
+    if (latestReg && latestReg.length > 0 && (latestReg[0] as any).enrollment_no) {
+      const lastSeqStr = (latestReg[0] as any).enrollment_no.slice(prefix.length);
       const parsedSeq = parseInt(lastSeqStr, 10);
       if (!isNaN(parsedSeq)) {
         nextSeq = parsedSeq + 1;
       }
     }
 
-    const registration_no = `${prefix}${String(nextSeq).padStart(2, '0')}`;
+    const enrollment_no = `${prefix}${String(nextSeq).padStart(2, '0')}`;
 
     const { data, error } = await supabaseAdmin
       .from('student_registrations')
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         ...parsed.data,
         email: normalizedEmail,
         college_id: session.college_id,
-        registration_no,
+        enrollment_no,
       })
       .select()
       .single();
