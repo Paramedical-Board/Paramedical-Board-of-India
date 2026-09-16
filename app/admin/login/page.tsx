@@ -49,10 +49,17 @@ export default function AdminLoginPage() {
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setError(res.status === 404 ? "Login service endpoint not found (404). Please refresh the page." : "Server error occurred. Please try again.");
+        return;
+      }
 
       if (!res.ok || !data.success) {
-        setError(data.error || "Invalid credentials. Please try again.");
+        setError(data?.error || "Invalid credentials. Please try again.");
         return;
       }
 
@@ -95,10 +102,17 @@ export default function AdminLoginPage() {
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setError("Server error during OTP verification. Please try again.");
+        return;
+      }
 
       if (!res.ok || !data.success) {
-        setError(data.error || "Verification failed. Please try again.");
+        setError(data?.error || "Verification failed. Please try again.");
         return;
       }
 
@@ -132,10 +146,17 @@ export default function AdminLoginPage() {
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setError("Failed to resend OTP. Server error occurred.");
+        return;
+      }
 
       if (!res.ok || !data.success) {
-        setError(data.error || "Failed to resend OTP. Please try again.");
+        setError(data?.error || "Failed to resend OTP. Please try again.");
         return;
       }
 
