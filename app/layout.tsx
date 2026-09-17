@@ -17,12 +17,54 @@ const notoDevanagari = Noto_Sans_Devanagari({
 });
 
 export const metadata: Metadata = {
-  title: "Paramedical Board of India",
-  description: "Paramedical Board of India Official Portal",
+  metadataBase: new URL("https://www.indianparamedicalboardofindia.com"),
+  title: {
+    default: "Indian Paramedical Board of India",
+    template: "%s | Indian Paramedical Board of India",
+  },
+  description:
+    "Indian Paramedical Board of India Official Portal. Empowering professionals, accrediting institutions, and ensuring the highest standards of paramedical care.",
+  keywords: [
+    "Indian Paramedical Board of India",
+    "Indian Paramedical Board",
+    "IPBI",
+    "Paramedical Board of India",
+    "Paramedical Council",
+    "Paramedical Diploma",
+    "Paramedical Certificate",
+    "Paramedical Courses",
+  ],
   icons: {
-    icon: "/logo.png",
+    icon: [
+      { url: "/logo.png" },
+      { url: "/icon.png" },
+    ],
     shortcut: "/logo.png",
     apple: "/logo.png",
+  },
+  openGraph: {
+    title: "Indian Paramedical Board of India",
+    description:
+      "Indian Paramedical Board of India Official Portal. Empowering professionals, accrediting institutions, and ensuring the highest standards of paramedical care.",
+    url: "https://www.indianparamedicalboardofindia.com",
+    siteName: "Indian Paramedical Board of India",
+    images: [
+      {
+        url: "/logo.png",
+        width: 800,
+        height: 800,
+        alt: "Indian Paramedical Board of India Logo",
+      },
+    ],
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Indian Paramedical Board of India",
+    description:
+      "Indian Paramedical Board of India Official Portal. Empowering professionals, accrediting institutions, and ensuring the highest standards of paramedical care.",
+    images: ["/logo.png"],
   },
 };
 
