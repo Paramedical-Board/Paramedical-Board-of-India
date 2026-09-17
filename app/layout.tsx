@@ -36,11 +36,11 @@ export const metadata: Metadata = {
   ],
   icons: {
     icon: [
-      { url: "/logo.png" },
-      { url: "/icon.png" },
+      { url: "/favicon-32.png", sizes: "32x32" },
+      { url: "/favicon-512.png", sizes: "512x512" },
     ],
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    shortcut: "/favicon-32.png",
+    apple: "/favicon-512.png",
   },
   openGraph: {
     title: "Indian Paramedical Board of India",
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
     siteName: "Indian Paramedical Board of India",
     images: [
       {
-        url: "/logo.png",
-        width: 800,
-        height: 800,
+        url: "/favicon-512.png",
+        width: 512,
+        height: 512,
         alt: "Indian Paramedical Board of India Logo",
       },
     ],
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     title: "Indian Paramedical Board of India",
     description:
       "Indian Paramedical Board of India Official Portal. Empowering professionals, accrediting institutions, and ensuring the highest standards of paramedical care.",
-    images: ["/logo.png"],
+    images: ["/favicon-512.png"],
   },
 };
 
