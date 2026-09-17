@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
       .eq('id', session.college_id)
       .single();
 
-    const collegeCode = college?.college_code ? String(college.college_code).padStart(2, '0') : '01';
+    const rawCollegeCode = college?.college_code ? String(college.college_code).trim() : '01';
+    const collegeCode = rawCollegeCode.padStart(2, '0').slice(-2);
     const sessDigits = extractSessionDigits(parsed.data.academic_session);
     const prefix = `IPMB${collegeCode}${sessDigits}`;
 
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Supabase insert error:', error);
-      return NextResponse.json({ error: 'Database insert failed' }, { status: 500 });
+      return NextResponse.json({ error: error.message || 'Database insert failed' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, registration: data });

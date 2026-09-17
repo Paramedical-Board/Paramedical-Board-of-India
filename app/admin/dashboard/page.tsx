@@ -88,10 +88,6 @@ export default function AdminApplicationsDashboardPage() {
       <div className="bg-white rounded-lg shadow-xs border border-slate-200 p-6 mb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-amber-50 text-amber-800 text-xs font-bold rounded-full mb-2 border border-amber-200">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              Central Verification Desk • Session 2026-2027
-            </div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#00031D] tracking-tight">
               College Student Applications / छात्र आवेदन प्रबंधन
             </h1>

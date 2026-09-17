@@ -1,30 +1,54 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import RegistrationForm from "./RegistrationForm";
 
 export default function StudentRegistrationGatedView() {
   const [verificationState, setVerificationState] = useState<"idle" | "otp_sent" | "verified">("idle");
+  const [candidateName, setCandidateName] = useState("");
+  const [fatherName, setFatherName] = useState("");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [draftId, setDraftId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const initialFormData = useMemo(
+    () => ({
+      candidate_name: candidateName,
+      father_name: fatherName,
+      email: email,
+    }),
+    [candidateName, fatherName, email]
+  );
+
   // Cooldown countdown timer
   useEffect(() => {
-    if (resendCooldown <= 0) return;
+    if (resendCooldown <= 0 || verificationState === "verified") return;
     const interval = setInterval(() => {
       setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
-  }, [resendCooldown]);
+  }, [resendCooldown, verificationState]);
 
   // Handler: Send OTP (State A -> State B)
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
+    const cleanName = candidateName.trim();
+    const cleanFather = fatherName.trim();
+
+    if (!cleanName) {
+      setError("Please enter candidate name. / कृपया अभ्यर्थी का नाम दर्ज करें।");
+      return;
+    }
+
+    if (!cleanFather) {
+      setError("Please enter father's name. / कृपया पिता का नाम दर्ज करें।");
+      return;
+    }
 
     if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setError("Please enter a valid student email address. / कृपया वैध ईमेल आईडी दर्ज करें।");
@@ -55,7 +79,7 @@ export default function StudentRegistrationGatedView() {
       setOtp("");
       setError(null);
       setResendCooldown(60);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Send OTP error:", err);
       setError("Network error occurred while sending OTP. Please check your connection.");
     } finally {
@@ -68,6 +92,8 @@ export default function StudentRegistrationGatedView() {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
     const cleanOtp = otp.trim();
+    const cleanName = candidateName.trim();
+    const cleanFather = fatherName.trim();
 
     if (!cleanOtp || cleanOtp.length !== 6) {
       setError("Please enter the complete 6-digit OTP. / कृपया 6 अंकों का ओटीपी दर्ज करें।");
@@ -94,10 +120,33 @@ export default function StudentRegistrationGatedView() {
         return;
       }
 
+      // Automatically create a draft on verification success
+      try {
+        const draftRes = await fetch("/api/college/drafts", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email: cleanEmail,
+            candidate_name: cleanName,
+            father_name: cleanFather,
+          }),
+        });
+        const draftData = await draftRes.json();
+        if (draftRes.ok && draftData.draft?.id) {
+          setDraftId(draftData.draft.id);
+        }
+      } catch (draftErr) {
+        console.error("Failed to automatically create registration draft:", draftErr);
+      }
+
       setEmail(cleanEmail);
+      setResendCooldown(0);
       setVerificationState("verified");
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Verify OTP error:", err);
       setError("Network error occurred while verifying OTP. Please try again.");
     } finally {
@@ -131,7 +180,7 @@ export default function StudentRegistrationGatedView() {
       }
 
       setResendCooldown(60);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Resend OTP error:", err);
       setError("Failed to resend OTP. Please try again.");
     } finally {
@@ -234,6 +283,59 @@ export default function StudentRegistrationGatedView() {
             {verificationState === "idle" ? (
               /* State A: Email Entry Form */
               <form onSubmit={handleSendOtp} className="space-y-4">
+                {/* Candidate Name */}
+                <div>
+                  <label
+                    htmlFor="student-verify-name"
+                    className="block text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider mb-1.5"
+                  >
+                    Candidate Name / अभ्यर्थी का नाम <span className="text-[#B13B1C]">*</span>
+                  </label>
+                  <div className="relative rounded-md shadow-xs">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <input
+                      id="student-verify-name"
+                      type="text"
+                      required
+                      value={candidateName}
+                      onChange={(e) => setCandidateName(e.target.value)}
+                      placeholder="e.g. Rahul Sharma"
+                      className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#143E66] focus:border-transparent transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Father's Name */}
+                <div>
+                  <label
+                    htmlFor="student-verify-father"
+                    className="block text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider mb-1.5"
+                  >
+                    Father&apos;s Name / पिता का नाम <span className="text-[#B13B1C]">*</span>
+                  </label>
+                  <div className="relative rounded-md shadow-xs">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <input
+                      id="student-verify-father"
+                      type="text"
+                      required
+                      value={fatherName}
+                      onChange={(e) => setFatherName(e.target.value)}
+                      placeholder="e.g. Ramesh Sharma"
+                      className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#143E66] focus:border-transparent transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Candidate Email */}
                 <div>
                   <label
                     htmlFor="student-verify-email"
@@ -275,7 +377,7 @@ export default function StudentRegistrationGatedView() {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    disabled={loading || !email.trim()}
+                    disabled={loading || !candidateName.trim() || !fatherName.trim() || !email.trim()}
                     className="w-full sm:w-auto px-6 py-2.5 bg-[#143E66] hover:bg-[#0d2a45] text-white text-xs sm:text-sm font-bold uppercase tracking-wider rounded shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                   >
                     {loading ? (
@@ -316,13 +418,18 @@ export default function StudentRegistrationGatedView() {
               /* State B: OTP Verification Form */
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div className="bg-blue-50/80 border border-blue-200 rounded-md p-3.5 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                      Code Sent To:
-                    </span>
-                    <span className="text-sm font-semibold text-slate-800 font-mono">
-                      {email}
-                    </span>
+                  <div className="space-y-1">
+                    <div className="text-xs font-bold text-slate-800">
+                      {candidateName} <span className="text-slate-500 font-normal">s/o, d/o</span> {fatherName}
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        Code Sent To:{" "}
+                      </span>
+                      <span className="text-xs sm:text-sm font-semibold text-slate-800 font-mono">
+                        {email}
+                      </span>
+                    </div>
                   </div>
 
                   <button
@@ -330,7 +437,7 @@ export default function StudentRegistrationGatedView() {
                     onClick={handleChangeEmail}
                     className="text-xs font-semibold text-[#143E66] hover:underline cursor-pointer"
                   >
-                    Change Email / बदलें
+                    Change / बदलें
                   </button>
                 </div>
 
@@ -420,7 +527,11 @@ export default function StudentRegistrationGatedView() {
 
       {/* State C: Registration Form is rendered ONLY after verification */}
       {verificationState === "verified" && (
-        <RegistrationForm verifiedEmail={email} />
+        <RegistrationForm
+          verifiedEmail={email}
+          draftId={draftId || undefined}
+          initialData={initialFormData}
+        />
       )}
     </div>
   );

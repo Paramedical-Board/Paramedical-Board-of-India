@@ -37,6 +37,8 @@ export interface ResultData {
   grand_total_obtained: number;
   grand_total_max: number;
   final_result: "PASS" | "FAIL" | "INCOMPLETE";
+  result_published_at?: string | null;
+  result_published_2nd_year_at?: string | null;
 }
 
 export interface ResultDataResult {
@@ -61,7 +63,7 @@ export async function getResultData(
   const { data: reg, error: regError } = await supabaseAdmin
     .from("student_registrations")
     .select(
-      "enrollment_no, roll_no, roll_no_2nd_year, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, admit_card_2nd_year_generated_at, exam_session_id, exam_session_id_2nd_year, college_id, colleges(college_name, username)"
+      "enrollment_no, roll_no, roll_no_2nd_year, candidate_name, father_name, mother_name, dob, course, photo_url, status, admit_card_generated_at, admit_card_2nd_year_generated_at, exam_session_id, exam_session_id_2nd_year, college_id, colleges(college_name, username), result_published_at, result_published_2nd_year_at"
     )
     .eq("id", registrationId)
     .single();
@@ -240,6 +242,8 @@ export async function getResultData(
       grand_total_obtained: grandTotalObtained,
       grand_total_max: grandTotalMax,
       final_result: finalResult,
+      result_published_at: (reg as any).result_published_at || null,
+      result_published_2nd_year_at: (reg as any).result_published_2nd_year_at || null,
     },
     error: null,
   };

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import imagekit from '@/lib/imagekit';
-import { verifyToken, COOKIE_NAME } from '@/lib/auth';
+import { verifyToken, COOKIE_NAME, verifyAdminToken, ADMIN_COOKIE_NAME } from '@/lib/auth';
 
 const DOC_RULES: Record<string, { allowedTypes: string[]; maxSize: number; extension: string }> = {
   photo: { allowedTypes: ['image/jpeg', 'image/jpg'], maxSize: 200 * 1024, extension: 'jpg' },
@@ -13,12 +13,14 @@ const DOC_RULES: Record<string, { allowedTypes: string[]; maxSize: number; exten
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get(COOKIE_NAME)?.value;
-    if (!token) {
+    const collegeToken = request.cookies.get(COOKIE_NAME)?.value;
+    const adminToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+
+    const isCollege = collegeToken ? verifyToken(collegeToken) : null;
+    const isAdmin = adminToken ? verifyAdminToken(adminToken) : null;
+
+    if (!isCollege && !isAdmin) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-    if (!verifyToken(token)) {
-      return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
     }
 
     const formData = await request.formData();

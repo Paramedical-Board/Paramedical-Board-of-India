@@ -29,17 +29,24 @@ interface RegistrationFormProps {
   initialData?: any;
   isEditMode?: boolean;
   registrationId?: string;
+  draftId?: string;
   queries?: RegistrationQuery[];
   verifiedEmail?: string;
+  submitEndpoint?: string;
+  isAdmin?: boolean;
 }
 
 export default function RegistrationForm({
   initialData,
   isEditMode = false,
   registrationId,
+  draftId,
   queries = [],
   verifiedEmail,
+  submitEndpoint,
+  isAdmin = false,
 }: RegistrationFormProps = {}) {
+  const router = useRouter();
   const [view, setView] = useState<"form" | "preview" | "success">("form");
   const [isFinalSubmitting, setIsFinalSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -51,6 +58,10 @@ export default function RegistrationForm({
     course: string;
     academic_session?: string;
   } | null>(null);
+
+  // Draft Autosave state
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
 
   // Captcha Generator State
   const [captchaCode, setCaptchaCode] = useState<string>("7K9X2B");
@@ -72,6 +83,7 @@ export default function RegistrationForm({
     register,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     setError,
     reset,
@@ -79,15 +91,58 @@ export default function RegistrationForm({
   } = useForm<StudentRegistrationFormData>({
     resolver: zodResolver(studentRegistrationSchema),
     defaultValues: {
-      email: verifiedEmail || "",
-      academic_session: "2026-2027",
-      declaration: isEditMode,
+      candidate_name: initialData?.candidate_name || "",
+      father_name: initialData?.father_name || "",
+      mother_name: initialData?.mother_name || "",
+      dob: initialData?.dob || "",
+      category: initialData?.category || "General",
+      gender: initialData?.gender || "Male",
+      mobile: initialData?.mobile || "",
+      email: initialData?.email || verifiedEmail || "",
+      academic_session: initialData?.academic_session || "2026-2027",
+      address: initialData?.address || "",
+      district: initialData?.district || "",
+      state: initialData?.state || "Uttar Pradesh",
+      pincode: initialData?.pincode || "",
+      course: initialData?.course || "",
+      declaration: isEditMode || isAdmin,
+      captchaInput: isAdmin ? "ADMIN1" : "",
       education: {
-        high_school: { board: "", year: "", total: "" as any, obtained: "" as any, percentage: "" as any },
-        intermediate: { board: "", year: "", total: "" as any, obtained: "" as any, percentage: "" as any },
-        graduation: { board: "", year: "", total: "" as any, obtained: "" as any, percentage: "" as any },
-        other: { board: "", year: "", total: "" as any, obtained: "" as any, percentage: "" as any },
+        high_school: {
+          board: initialData?.education?.high_school?.board || "",
+          year: initialData?.education?.high_school?.year || "",
+          total: initialData?.education?.high_school?.total || ("" as any),
+          obtained: initialData?.education?.high_school?.obtained || ("" as any),
+          percentage: initialData?.education?.high_school?.percentage || ("" as any),
+        },
+        intermediate: {
+          board: initialData?.education?.intermediate?.board || "",
+          year: initialData?.education?.intermediate?.year || "",
+          total: initialData?.education?.intermediate?.total || ("" as any),
+          obtained: initialData?.education?.intermediate?.obtained || ("" as any),
+          percentage: initialData?.education?.intermediate?.percentage || ("" as any),
+        },
+        graduation: {
+          board: initialData?.education?.graduation?.board || "",
+          year: initialData?.education?.graduation?.year || "",
+          total: initialData?.education?.graduation?.total || ("" as any),
+          obtained: initialData?.education?.graduation?.obtained || ("" as any),
+          percentage: initialData?.education?.graduation?.percentage || ("" as any),
+        },
+        other: {
+          board: initialData?.education?.other?.board || "",
+          year: initialData?.education?.other?.year || "",
+          total: initialData?.education?.other?.total || ("" as any),
+          obtained: initialData?.education?.other?.obtained || ("" as any),
+          percentage: initialData?.education?.other?.percentage || ("" as any),
+        },
       },
+      photo_url: initialData?.photo_url || "",
+      signature_url: initialData?.signature_url || "",
+      aadhaar_url: initialData?.aadhaar_url || "",
+      marksheet_10th_url: initialData?.marksheet_10th_url || "",
+      marksheet_12th_url: initialData?.marksheet_12th_url || "",
+      affidavit_url: initialData?.affidavit_url || "",
     },
   });
 
@@ -98,9 +153,12 @@ export default function RegistrationForm({
     }
   }, [verifiedEmail, setValue]);
 
-  // Populate initial values in edit mode
+  // Populate initial values in edit mode only when switching registrationId
+  const lastLoadedRegistrationIdRef = React.useRef<string | null>(null);
+
   useEffect(() => {
-    if (initialData) {
+    if (isEditMode && initialData && registrationId && lastLoadedRegistrationIdRef.current !== registrationId) {
+      lastLoadedRegistrationIdRef.current = registrationId;
       reset({
         candidate_name: initialData.candidate_name || "",
         father_name: initialData.father_name || "",
@@ -153,10 +211,18 @@ export default function RegistrationForm({
         marksheet_12th_url: initialData.marksheet_12th_url || "",
         affidavit_url: initialData.affidavit_url || "",
         declaration: true,
-        captchaInput: "",
+        captchaInput: isAdmin ? (captchaCode || "ADMIN1") : "",
       });
     }
-  }, [initialData, reset]);
+  }, [isEditMode, initialData, registrationId, reset, isAdmin, captchaCode]);
+
+  // Ensure captcha and declaration are satisfied when in admin mode
+  useEffect(() => {
+    if (isAdmin) {
+      setValue("declaration", true);
+      setValue("captchaInput", captchaCode || "ADMIN1");
+    }
+  }, [isAdmin, captchaCode, setValue]);
 
   // Open queries map
   const openQueriesMap = React.useMemo(() => {
@@ -181,10 +247,57 @@ export default function RegistrationForm({
     photoUrl && signatureUrl && aadhaarUrl && marksheet10thUrl && marksheet12thUrl && affidavitUrl
   );
 
-  // Task 3: On "Submit Registration" click -> Validation -> Switch to Preview
+  // Manual / automatic draft save helper
+  const handleSaveDraft = useCallback(
+    async (_isManual?: boolean) => {
+      if (!draftId || view !== "form") return;
+
+      setSaveStatus("saving");
+      try {
+        const currentValues = getValues();
+        const res = await fetch(`/api/college/drafts/${draftId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(currentValues),
+        });
+
+        if (res.ok) {
+          setSaveStatus("saved");
+          setLastSavedTime(new Date());
+        } else {
+          setSaveStatus("error");
+        }
+      } catch (err) {
+        console.error("Autosave draft error:", err);
+        setSaveStatus("error");
+      }
+    },
+    [draftId, view, getValues]
+  );
+
+  // Autosave: debounced (~1500ms) subscription when draftId is present
+  useEffect(() => {
+    if (!draftId || view !== "form") return;
+
+    let timer: NodeJS.Timeout;
+    const subscription = watch(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        handleSaveDraft(false);
+      }, 1500);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [draftId, view, watch, handleSaveDraft]);
+
   const onSubmitForm = (data: StudentRegistrationFormData) => {
-    // Verify captcha
-    if (data.captchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
+    // Verify captcha (skip for admin)
+    if (!isAdmin && data.captchaInput.trim().toUpperCase() !== captchaCode.toUpperCase()) {
       setError("captchaInput", {
         type: "manual",
         message: "Captcha does not match. Please enter the correct code. / सुरक्षा कोड सही नहीं है।",
@@ -208,7 +321,7 @@ export default function RegistrationForm({
     setSubmitErrorDetails(null);
 
     try {
-      const formValues = watch();
+      const formValues = getValues();
 
       // Clean up payload shape to match RegistrationPayload
       const payload: RegistrationPayload = {
@@ -272,10 +385,10 @@ export default function RegistrationForm({
         };
       }
 
-      const endpoint = isEditMode && registrationId
+      const endpoint = submitEndpoint || (isEditMode && registrationId
         ? `/api/college/applications/${registrationId}`
-        : "/api/student/registration";
-      const method = isEditMode ? "PATCH" : "POST";
+        : "/api/student/registration");
+      const method = (isEditMode || submitEndpoint) ? "PATCH" : "POST";
 
       const res = await fetch(endpoint, {
         method,
@@ -288,7 +401,7 @@ export default function RegistrationForm({
       if (res.status === 401) {
         setSubmitError("Session expired, please log in again / सत्र समाप्त हो गया है, कृपया पुनः लॉगिन करें। Redirecting to login...");
         setTimeout(() => {
-          window.location.href = "/college/login";
+          window.location.href = isAdmin ? "/admin/login" : "/college/login";
         }, 1500);
         return;
       }
@@ -301,6 +414,19 @@ export default function RegistrationForm({
           setSubmitErrorDetails(data.details);
         }
         return;
+      }
+
+      // If admin, redirect back to application detail page directly
+      if (isAdmin && registrationId) {
+        router.push(`/admin/dashboard/applications/${registrationId}`);
+        return;
+      }
+
+      // Clean up draft if this registration was backed by a draft (best-effort)
+      if (draftId) {
+        fetch(`/api/college/drafts/${draftId}`, {
+          method: "DELETE",
+        }).catch((delErr) => console.warn("Could not delete draft on submission:", delErr));
       }
 
       // Success
@@ -530,6 +656,7 @@ export default function RegistrationForm({
                     onChange={(url) => setValue("photo_url", url, { shouldValidate: true })}
                     error={errors.photo_url?.message}
                     queryMessage={openQueriesMap["photo_url"]?.message}
+                    isAdmin={isAdmin}
                   />
 
                   <FileUploadField
@@ -543,6 +670,7 @@ export default function RegistrationForm({
                     onChange={(url) => setValue("signature_url", url, { shouldValidate: true })}
                     error={errors.signature_url?.message}
                     queryMessage={openQueriesMap["signature_url"]?.message}
+                    isAdmin={isAdmin}
                   />
                 </div>
               </div>
@@ -566,6 +694,7 @@ export default function RegistrationForm({
                     onChange={(url) => setValue("aadhaar_url", url, { shouldValidate: true })}
                     error={errors.aadhaar_url?.message}
                     queryMessage={openQueriesMap["aadhaar_url"]?.message}
+                    isAdmin={isAdmin}
                   />
 
                   {/* 2. 10th Marksheet */}
@@ -580,6 +709,7 @@ export default function RegistrationForm({
                     onChange={(url) => setValue("marksheet_10th_url", url, { shouldValidate: true })}
                     error={errors.marksheet_10th_url?.message}
                     queryMessage={openQueriesMap["marksheet_10th_url"]?.message}
+                    isAdmin={isAdmin}
                   />
 
                   {/* 3. 12th Marksheet */}
@@ -594,6 +724,7 @@ export default function RegistrationForm({
                     onChange={(url) => setValue("marksheet_12th_url", url, { shouldValidate: true })}
                     error={errors.marksheet_12th_url?.message}
                     queryMessage={openQueriesMap["marksheet_12th_url"]?.message}
+                    isAdmin={isAdmin}
                   />
 
                   {/* 4. Affidavit */}
@@ -608,29 +739,75 @@ export default function RegistrationForm({
                     onChange={(url) => setValue("affidavit_url", url, { shouldValidate: true })}
                     error={errors.affidavit_url?.message}
                     queryMessage={openQueriesMap["affidavit_url"]?.message}
+                    isAdmin={isAdmin}
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 6. Security & Declaration */}
-          <CaptchaField
-            register={register}
-            errors={errors}
-            captchaCode={captchaCode}
-            onRefreshCaptcha={generateCaptcha}
-          />
+          {/* 6. Security & Declaration (Skipped for Admin) */}
+          {!isAdmin && (
+            <CaptchaField
+              register={register}
+              errors={errors}
+              captchaCode={captchaCode}
+              onRefreshCaptcha={generateCaptcha}
+            />
+          )}
 
           {/* Form Action Buttons */}
           <div className="bg-white rounded-lg border border-slate-200/90 shadow-sm p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-3.5">
-            <button
-              type="button"
-              onClick={handleResetForm}
-              className="w-full sm:w-auto px-6 py-3 border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm uppercase tracking-wider rounded transition-colors cursor-pointer"
-            >
-              Reset Form / रीसेट करें
-            </button>
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={handleResetForm}
+                className="w-full sm:w-auto px-6 py-3 border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm uppercase tracking-wider rounded transition-colors cursor-pointer"
+              >
+                Reset Form / रीसेट करें
+              </button>
+
+              {draftId && (
+                <button
+                  type="button"
+                  onClick={() => handleSaveDraft(true)}
+                  disabled={saveStatus === "saving"}
+                  className="w-full sm:w-auto px-5 py-3 border-2 border-[#143E66] text-[#143E66] hover:bg-[#143E66] hover:text-white font-bold text-xs sm:text-sm uppercase tracking-wider rounded transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {saveStatus === "saving" ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Saving... / सहेजा जा रहा है...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                      </svg>
+                      <span>Save Draft / ड्राफ्ट सहेजें</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {draftId && saveStatus === "saved" && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded border border-emerald-200">
+                  <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Draft saved {lastSavedTime ? `(${lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}
+                </span>
+              )}
+
+              {draftId && saveStatus === "error" && (
+                <span className="text-xs font-semibold text-red-600 bg-red-50 px-2.5 py-1.5 rounded border border-red-200">
+                  Failed to auto-save draft
+                </span>
+              )}
+            </div>
 
             <div className="flex flex-col items-center sm:items-end w-full sm:w-auto">
               <button

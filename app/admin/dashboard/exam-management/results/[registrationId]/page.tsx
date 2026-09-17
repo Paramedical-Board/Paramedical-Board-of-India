@@ -103,6 +103,7 @@ export default async function ResultEntryPage({ params, searchParams }: PageProp
         <ResultMarksForm
           initialData={resultData}
           registrationId={registrationId}
+          yearNumber={isYear2 ? 2 : 1}
         />
       </div>
     </div>

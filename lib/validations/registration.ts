@@ -50,3 +50,42 @@ export const registrationSchema = z.object({
 });
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;
+
+const draftEducationEntrySchema = z.object({
+  board: z.string().optional().default(''),
+  year: z.string().optional().default(''),
+  total: z.union([z.coerce.number(), z.literal(''), z.null()]).optional(),
+  obtained: z.union([z.coerce.number(), z.literal(''), z.null()]).optional(),
+  percentage: z.union([z.coerce.number(), z.literal(''), z.null()]).optional(),
+}).partial();
+
+export const draftRegistrationSchema = z.object({
+  candidate_name: z.string().optional(),
+  father_name: z.string().optional(),
+  mother_name: z.string().optional(),
+  dob: z.string().optional(),
+  category: z.string().optional(),
+  gender: z.string().optional(),
+  mobile: z.string().optional(),
+  email: z.string().optional(),
+  academic_session: z.string().optional(),
+  address: z.string().optional(),
+  district: z.string().optional(),
+  state: z.string().optional(),
+  pincode: z.string().optional(),
+  course: z.string().optional(),
+  education: z.object({
+    high_school: draftEducationEntrySchema.optional(),
+    intermediate: draftEducationEntrySchema.optional(),
+    graduation: draftEducationEntrySchema.optional(),
+    other: draftEducationEntrySchema.optional(),
+  }).partial().optional(),
+  photo_url: z.string().optional(),
+  signature_url: z.string().optional(),
+  aadhaar_url: z.string().optional(),
+  marksheet_10th_url: z.string().optional(),
+  marksheet_12th_url: z.string().optional(),
+  affidavit_url: z.string().optional(),
+}).passthrough();
+
+export type DraftRegistrationInput = z.infer<typeof draftRegistrationSchema>;

@@ -58,6 +58,20 @@ interface ResultStudentItem {
   roll_no: string;
   first_year_passed?: boolean;
   first_year_reason?: string;
+  is_published?: boolean;
+  published_at?: string | null;
+}
+
+interface AllottedStudentItem {
+  registration_id: string;
+  candidate_name: string;
+  father_name: string;
+  registration_no: string;
+  course: string;
+  college_name: string;
+  roll_no: string;
+  admit_card_generated_at: string | null;
+  updated_at: string | null;
 }
 
 export default function ExamManagementHubPage() {
@@ -188,6 +202,9 @@ export default function ExamManagementHubPage() {
   const [allotResultMsg, setAllotResultMsg] = useState<string | null>(null);
   const [allotError, setAllotError] = useState<string | null>(null);
   const [allottedResults, setAllottedResults] = useState<Array<{ id: string; roll_no: string; exam_session_id?: string }>>([]);
+  const [allottedStudents, setAllottedStudents] = useState<AllottedStudentItem[]>([]);
+  const [loadingAllottedStudents, setLoadingAllottedStudents] = useState(false);
+  const [allottedStudentsError, setAllottedStudentsError] = useState<string | null>(null);
 
   // Tab D (previously E): Results State
   const [resultStudents, setResultStudents] = useState<ResultStudentItem[]>([]);
@@ -206,9 +223,11 @@ export default function ExamManagementHubPage() {
       setLoadingSessions(true);
       setLoadingDatesheet(true);
       setLoadingResults(true);
+      setLoadingAllottedStudents(true);
       setSubjectError(null);
       setDatesheetError(null);
       setResultsError(null);
+      setAllottedStudentsError(null);
 
       try {
         // 1. Fetch Subjects & Sessions in parallel (subjects scoped to year_number)
@@ -264,7 +283,7 @@ export default function ExamManagementHubPage() {
         setLoadingSessions(false);
 
         if (matched?.id) {
-          // 2. Fetch Datesheet & Results for this matched session
+          // 2. Fetch Datesheet, Results & Allotted Roll Numbers for this matched session
           const datesheetPromise = fetch(
             `/api/admin/datesheets?course_name=${encodeURIComponent(course)}&session_id=${encodeURIComponent(matched.id)}`
           )
@@ -276,7 +295,12 @@ export default function ExamManagementHubPage() {
             .then((r) => r.json())
             .catch(() => ({ students: [], released: false }));
 
-          const [dsData, resData] = await Promise.all([datesheetPromise, resultsPromise]);
+          const rollNumbersUrl = `/api/admin/roll-numbers?session_id=${encodeURIComponent(matched.id)}&year_number=${encodeURIComponent(String(targetSessionOpt.year_number || 1))}`;
+          const rollNumbersPromise = fetch(rollNumbersUrl)
+            .then((r) => r.json())
+            .catch(() => ({ students: [] }));
+
+          const [dsData, resData, rollData] = await Promise.all([datesheetPromise, resultsPromise, rollNumbersPromise]);
 
           if (fetchId !== fetchRequestIdRef.current) return;
 
@@ -297,11 +321,13 @@ export default function ExamManagementHubPage() {
 
           setResultStudents(resData.students || []);
           setResultsReleased(resData.released ?? false);
+          setAllottedStudents(rollData.students || []);
         } else {
           setDatesheetSubjects([]);
           setDatesheetComplete(false);
           setResultStudents([]);
           setResultsReleased(false);
+          setAllottedStudents([]);
         }
       } catch (err) {
         console.error("syncAllData error:", err);
@@ -311,17 +337,47 @@ export default function ExamManagementHubPage() {
           setLoadingSessions(false);
           setLoadingDatesheet(false);
           setLoadingResults(false);
+          setLoadingAllottedStudents(false);
         }
       }
     },
     []
   );
 
+  // Dedicated helper to refresh allotted students roster on demand
+  const fetchAllottedStudents = useCallback(async (sessionId: string, yearNumber: number) => {
+    setLoadingAllottedStudents(true);
+    setAllottedStudentsError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/roll-numbers?session_id=${encodeURIComponent(sessionId)}&year_number=${encodeURIComponent(String(yearNumber))}`
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setAllottedStudentsError(data.error || "Failed to load allotted students");
+      } else {
+        setAllottedStudents(data.students || []);
+      }
+    } catch (err) {
+      console.error("Fetch allotted students error:", err);
+      setAllottedStudentsError("Failed to connect to server.");
+    } finally {
+      setLoadingAllottedStudents(false);
+    }
+  }, []);
+
   // Sync data whenever isInitialized is true and course/session changes
   useEffect(() => {
     if (!isInitialized) return;
     syncAllData(selectedCourse, activeSessionOption);
   }, [isInitialized, selectedCourse, activeSessionOption, syncAllData]);
+
+  // Re-fetch allotted students roster whenever switching to the roll_admit tab
+  useEffect(() => {
+    if (activeTab === "roll_admit" && activeSession?.id) {
+      fetchAllottedStudents(activeSession.id, activeSessionOption.year_number || 1);
+    }
+  }, [activeTab, activeSession?.id, activeSessionOption.year_number, fetchAllottedStudents]);
 
   // Handlers for course and session dropdown changes
   const handleCourseChange = (newCourse: string) => {
@@ -770,6 +826,7 @@ export default function ExamManagementHubPage() {
       } else {
         setAllotResultMsg(data.message || "0 students needed roll numbers (all approved students in this batch already have roll numbers).");
       }
+      await fetchAllottedStudents(activeSession.id, activeSessionOption.year_number || 1);
     } catch (err) {
       console.error("Allot roll numbers error:", err);
       setAllotError("Network error during roll number allotment.");
@@ -1783,41 +1840,110 @@ export default function ExamManagementHubPage() {
                   {allotResultMsg}
                 </div>
               )}
-              {allottedResults.length > 0 && (
-                <div className="p-4 bg-emerald-50/70 border border-emerald-300 rounded-lg">
-                  <div className="flex items-center justify-between mb-2.5">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Allotted Roll Numbers List ({allottedResults.length})</span>
-                    </h4>
-                    <span className="text-[11px] font-semibold text-emerald-800">
-                      Sequential Roll Numbers Generated
+              {/* Allotted Students Persistent Roster */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#00031D] flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-[#143E66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Allotted Roll Numbers List ({allottedStudents.length})</span>
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    {loadingAllottedStudents && (
+                      <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                        <svg className="w-3 h-3 animate-spin text-[#143E66]" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Refreshing roster...
+                      </span>
+                    )}
+                    <span className="text-[11px] font-semibold text-slate-600">
+                      {activeSessionOption.label}
                     </span>
                   </div>
-                  <div className="overflow-x-auto max-h-60 overflow-y-auto border border-emerald-200 rounded bg-white">
+                </div>
+
+                {allottedStudentsError && (
+                  <div className="mb-3 text-xs font-bold text-red-700 bg-red-50 p-2.5 rounded border border-red-200">
+                    {allottedStudentsError}
+                  </div>
+                )}
+
+                {loadingAllottedStudents && allottedStudents.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-500 bg-white rounded border border-slate-200">
+                    <svg className="w-5 h-5 animate-spin mx-auto text-[#143E66] mb-2" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Loading allotted candidates...
+                  </div>
+                ) : allottedStudents.length === 0 ? (
+                  <div className="py-8 text-center bg-white rounded border border-slate-200">
+                    <p className="text-xs text-slate-500 font-medium">
+                      No roll numbers allotted yet for this batch.
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Click &quot;Allot Roll Numbers&quot; above to assign sequential roll numbers to approved candidates.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto max-h-80 overflow-y-auto border border-slate-200 rounded bg-white shadow-2xs">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-emerald-100/60 text-emerald-900 font-bold uppercase text-[10.5px]">
+                      <thead className="bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 border-b border-slate-200">
                         <tr>
-                          <th className="py-2 px-3 w-12 text-center">#</th>
-                          <th className="py-2 px-3">Student Registration ID</th>
-                          <th className="py-2 px-3">Assigned Roll Number</th>
+                          <th className="py-2.5 px-3 w-10 text-center">#</th>
+                          <th className="py-2.5 px-3">Roll No</th>
+                          <th className="py-2.5 px-3">Reg / Enr No</th>
+                          <th className="py-2.5 px-3">Candidate Name</th>
+                          <th className="py-2.5 px-3">Father&apos;s Name</th>
+                          <th className="py-2.5 px-3">College / Institute</th>
+                          <th className="py-2.5 px-3 text-center">Admit Card</th>
+                          <th className="py-2.5 px-3 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-emerald-100 text-slate-800">
-                        {allottedResults.map((item, idx) => (
-                          <tr key={item.id} className="hover:bg-emerald-50/40 transition-colors">
-                            <td className="py-2 px-3 text-center font-bold text-slate-500">{idx + 1}</td>
-                            <td className="py-2 px-3 font-mono text-slate-700">{item.id}</td>
-                            <td className="py-2 px-3 font-mono font-bold text-[#143E66]">{item.roll_no}</td>
+                      <tbody className="divide-y divide-slate-100 text-slate-800">
+                        {allottedStudents.map((item, idx) => (
+                          <tr key={item.registration_id} className="hover:bg-blue-50/40 transition-colors">
+                            <td className="py-2.5 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                            <td className="py-2.5 px-3 font-mono font-bold text-[#143E66]">{item.roll_no}</td>
+                            <td className="py-2.5 px-3 font-mono text-slate-600">{item.registration_no}</td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-900">{item.candidate_name}</td>
+                            <td className="py-2.5 px-3 text-slate-600">{item.father_name}</td>
+                            <td className="py-2.5 px-3 text-slate-600 max-w-[200px] truncate" title={item.college_name}>
+                              {item.college_name}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {item.admit_card_generated_at ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  Generated
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                  Pending
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <Link
+                                href={`/admin/dashboard/applications/${item.registration_id}`}
+                                target="_blank"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#143E66] hover:text-[#0b2545] hover:underline"
+                              >
+                                View
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </Link>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
               {allotError && (
                 <div className="text-xs font-bold text-red-700 bg-red-50 px-3.5 py-2 rounded border border-red-200">
                   {allotError}
@@ -1832,12 +1958,12 @@ export default function ExamManagementHubPage() {
                   Step 2: Generate &amp; Print Bulk Admit Cards
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Opens printable admit cards for all approved candidates in this course &amp; session.
+                  Preview and edit candidate details before confirming bulk admit card generation and printing.
                 </p>
               </div>
 
               <Link
-                href={`/admin/dashboard/admit-cards/bulk?course_name=${encodeURIComponent(selectedCourse)}&academic_session=${encodeURIComponent(activeSessionOption.academic_session)}&session_label=${encodeURIComponent(activeSessionOption.session_label)}&year_number=${activeSessionOption.year_number}`}
+                href={`/admin/dashboard/admit-cards/bulk/preview?course_name=${encodeURIComponent(selectedCourse)}&academic_session=${encodeURIComponent(activeSessionOption.academic_session)}&session_label=${encodeURIComponent(activeSessionOption.session_label)}&year_number=${activeSessionOption.year_number}`}
                 className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <svg className="w-4 h-4 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1944,8 +2070,14 @@ export default function ExamManagementHubPage() {
                         <td className="py-3 px-4 font-mono font-bold text-[#143E66]">{s.roll_no || "—"}</td>
                         <td className="py-3 px-4 font-mono text-slate-700">{s.enrollment_no || s.registration_no}</td>
                         <td className="py-3 px-4 font-bold text-slate-900 group-hover:text-[#143E66]">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span>{s.candidate_name}</span>
+                            {s.is_published && (
+                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[10px] font-bold flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Live Published
+                              </span>
+                            )}
                             {isLocked && (
                               <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-[10px] font-bold">
                                 1st Year Pending / Not Passed

@@ -446,7 +446,7 @@ export default function AdminCollegesPage() {
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition"
               />
               <p className="text-[11px] text-slate-500 font-medium mt-1">
-                Used in registration numbers (e.g. IPMB<strong>01</strong>232401).
+                Used in enrollment numbers (last 2 digits, e.g. code 202315 &rarr; IPMB<strong>15</strong>232401).
               </p>
             </div>
 

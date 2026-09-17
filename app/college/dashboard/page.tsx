@@ -13,13 +13,22 @@ export default async function CollegeDashboardHomePage() {
 
   // Fetch open queries count for notification badge
   let openQueriesCount = 0;
+  let draftsCount = 0;
   if (session?.college_id) {
-    const { count } = await supabaseAdmin
-      .from("registration_queries")
-      .select("id, student_registrations!inner(college_id)", { count: "exact", head: true })
-      .eq("student_registrations.college_id", session.college_id)
-      .eq("status", "open");
-    openQueriesCount = count || 0;
+    const [queriesRes, draftsRes] = await Promise.all([
+      supabaseAdmin
+        .from("registration_queries")
+        .select("id, student_registrations!inner(college_id)", { count: "exact", head: true })
+        .eq("student_registrations.college_id", session.college_id)
+        .eq("status", "open"),
+      supabaseAdmin
+        .from("student_registration_drafts")
+        .select("id", { count: "exact", head: true })
+        .eq("college_id", session.college_id)
+        .neq("status", "submitted"),
+    ]);
+    openQueriesCount = queriesRes.count || 0;
+    draftsCount = draftsRes.count || 0;
   }
 
   return (
@@ -309,7 +318,71 @@ export default async function CollegeDashboardHomePage() {
               </div>
             </Link>
 
-            {/* 5. Verification / Hall Tickets (Future Placeholder) */}
+            {/* 5. Incomplete & Draft Registrations Card */}
+            <Link
+              href="/college/dashboard/drafts"
+              className="group bg-white hover:bg-slate-50 text-slate-900 p-6 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border-2 border-slate-200 hover:border-[#143E66] flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-12 h-12 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform relative">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  {draftsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-black rounded-full shadow-xs">
+                      {draftsCount}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-lg font-bold text-[#00031D]">
+                    Incomplete Registrations
+                  </h3>
+                  {draftsCount > 0 ? (
+                    <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded">
+                      {draftsCount} Pending
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded">
+                      0 Pending
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mb-4">सत्यापित / अपूर्ण पंजीकरण</p>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Students who completed OTP verification. Resume forms without repeating OTP verification.
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#143E66]">
+                <span>View Incomplete Registrations</span>
+                <svg
+                  className="w-4 h-4 transform group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                  />
+                </svg>
+              </div>
+            </Link>
+
+            {/* 6. Verification / Hall Tickets (Future Placeholder) */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 opacity-75 flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-lg bg-slate-200 text-slate-500 flex items-center justify-center mb-4">

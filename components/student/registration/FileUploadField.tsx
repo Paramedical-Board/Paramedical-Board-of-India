@@ -14,6 +14,7 @@ interface Props {
   error?: string;
   aspectRatio?: "square" | "signature" | "document";
   queryMessage?: string;
+  isAdmin?: boolean;
 }
 
 export default function FileUploadField({
@@ -27,6 +28,7 @@ export default function FileUploadField({
   error,
   aspectRatio = "document",
   queryMessage,
+  isAdmin = false,
 }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -88,7 +90,7 @@ export default function FileUploadField({
       if (res.status === 401) {
         setUploadError("Session expired, please log in again / सत्र समाप्त हो गया है, कृपया पुनः लॉगिन करें");
         setTimeout(() => {
-          window.location.href = "/college/login";
+          window.location.href = isAdmin ? "/admin/login" : "/college/login";
         }, 1500);
         return;
       }

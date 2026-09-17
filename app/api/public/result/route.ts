@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   const { data: regList, error: regError } = await supabaseAdmin
     .from("student_registrations")
-    .select("id, course, roll_no, roll_no_2nd_year, exam_session_id, exam_session_id_2nd_year")
+    .select("id, course, roll_no, roll_no_2nd_year, exam_session_id, exam_session_id_2nd_year, result_published_at, result_published_2nd_year_at")
     .or(`roll_no.eq.${roll_no},roll_no_2nd_year.eq.${roll_no}`)
     .eq("dob", date_of_birth);
 
@@ -40,12 +40,18 @@ export async function POST(req: NextRequest) {
 
   const targetSessionId = yrNum === 2 ? (reg.exam_session_id_2nd_year || reg.exam_session_id) : reg.exam_session_id;
 
-  const released = await isCourseResultsReleased(reg.course, targetSessionId ?? undefined);
-  if (!released) {
-    return NextResponse.json(
-      { error: "Result for this course has not been published yet. Please check back later or contact your institution." },
-      { status: 400 }
-    );
+  const manuallyPublished = yrNum === 2
+    ? !!(reg as any).result_published_2nd_year_at
+    : !!(reg as any).result_published_at;
+
+  if (!manuallyPublished) {
+    const released = await isCourseResultsReleased(reg.course, targetSessionId ?? undefined);
+    if (!released) {
+      return NextResponse.json(
+        { error: "Result for this course has not been published yet. Please check back later or contact your institution." },
+        { status: 400 }
+      );
+    }
   }
 
   const { data, error } = await getResultData(reg.id, yrNum);

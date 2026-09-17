@@ -7,6 +7,7 @@ import ResultLayout from "@/components/ResultLayout";
 interface ResultMarksFormProps {
   initialData: ResultData;
   registrationId: string;
+  yearNumber?: number;
 }
 
 interface MarkInputState {
@@ -28,9 +29,21 @@ function computeGrade(percentage: number): string {
 export default function ResultMarksForm({
   initialData,
   registrationId,
+  yearNumber = 1,
 }: ResultMarksFormProps) {
   // Local authoritative result data
   const [resultData, setResultData] = useState<ResultData>(initialData);
+
+  // Initial publication timestamp based on active year
+  const initialPublished =
+    yearNumber === 2
+      ? initialData.result_published_2nd_year_at
+      : initialData.result_published_at;
+
+  const [publishedAt, setPublishedAt] = useState<string | null>(initialPublished || null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   // Form input values per subjectId
   const [formValues, setFormValues] = useState<Record<string, MarkInputState>>(() => {
@@ -225,12 +238,81 @@ export default function ResultMarksForm({
         // Authoritative server state
         setResultData(data.result);
         setSaveSuccess("Subject marks saved and official marksheet computed successfully! ✓");
+        const pub =
+          yearNumber === 2
+            ? data.result.result_published_2nd_year_at
+            : data.result.result_published_at;
+        if (pub !== undefined) {
+          setPublishedAt(pub);
+        }
       }
     } catch (err) {
       console.error("Save marks error:", err);
       setSaveError("Network error occurred while saving marks. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Handle Publish Single Student
+  const handlePublish = async () => {
+    if (liveResult.final_result === "INCOMPLETE" || isPublishing) return;
+
+    setIsPublishing(true);
+    setPublishError(null);
+    setPublishSuccess(null);
+
+    try {
+      const res = await fetch(`/api/admin/results/${registrationId}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year: yearNumber }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setPublishError(data.error || "Failed to publish student result.");
+        return;
+      }
+
+      setPublishedAt(data.published_at);
+      setPublishSuccess(`Student result published live to student portal successfully! ✓`);
+    } catch (err) {
+      console.error("Publish error:", err);
+      setPublishError("Network error occurred while publishing result.");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  // Handle Unpublish Single Student
+  const handleUnpublish = async () => {
+    if (isPublishing) return;
+
+    setIsPublishing(true);
+    setPublishError(null);
+    setPublishSuccess(null);
+
+    try {
+      const res = await fetch(`/api/admin/results/${registrationId}/publish?year=${yearNumber}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ year: yearNumber }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setPublishError(data.error || "Failed to unpublish student result.");
+        return;
+      }
+
+      setPublishedAt(null);
+      setPublishSuccess(`Student result unpublished successfully.`);
+    } catch (err) {
+      console.error("Unpublish error:", err);
+      setPublishError("Network error occurred while unpublishing result.");
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -331,6 +413,37 @@ export default function ResultMarksForm({
                   <button
                     type="button"
                     onClick={() => setSaveError(null)}
+                    className="text-red-700 hover:text-red-900 font-bold ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {publishSuccess && (
+                <div className="p-3 bg-emerald-50 border-l-4 border-emerald-600 text-emerald-900 rounded-r text-xs font-semibold animate-fadeIn flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span>{publishSuccess}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPublishSuccess(null)}
+                    className="text-emerald-700 hover:text-emerald-900 font-bold ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {publishError && (
+                <div className="p-3 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-r text-xs font-semibold animate-fadeIn flex items-center justify-between">
+                  <span>{publishError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPublishError(null)}
                     className="text-red-700 hover:text-red-900 font-bold ml-2"
                   >
                     ✕
@@ -514,6 +627,110 @@ export default function ResultMarksForm({
                   <p className="text-[11px] text-amber-700 text-center mt-2 font-medium">
                     * Enter all 3 marks (Theory, Practical, CA) for every subject to enable save.
                   </p>
+                )}
+              </div>
+
+              {/* Publish Student Result Section */}
+              <div className="pt-4 border-t border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Live Portal Publishing
+                  </span>
+                  {publishedAt && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Live on Portal
+                    </span>
+                  )}
+                </div>
+
+                {publishedAt ? (
+                  <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-1.5 text-emerald-900 font-semibold text-[11px]">
+                        <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span>Published on:</span>
+                      </div>
+                      <span className="font-mono text-[11px] font-bold text-emerald-800">
+                        {new Date(publishedAt).toLocaleString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handlePublish}
+                        disabled={liveResult.final_result === "INCOMPLETE" || isPublishing}
+                        className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {isPublishing ? (
+                          <>
+                            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            <span>Updating...</span>
+                          </>
+                        ) : (
+                          <span>Re-publish Result / पुनः प्रकाशित करें</span>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleUnpublish}
+                        disabled={isPublishing}
+                        className="py-2 px-3 bg-white hover:bg-red-50 text-slate-600 hover:text-red-700 text-xs font-semibold rounded border border-slate-300 hover:border-red-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title="Un-publish this student's result to make it hidden from public portal"
+                      >
+                        Un-publish
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handlePublish}
+                      disabled={liveResult.final_result === "INCOMPLETE" || isPublishing}
+                      className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs sm:text-sm font-bold uppercase tracking-wider rounded shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isPublishing ? (
+                        <>
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span>Publishing to Portal...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                          </svg>
+                          <span>Publish This Student&apos;s Result / इस छात्र का परिणाम प्रकाशित करें</span>
+                        </>
+                      )}
+                    </button>
+
+                    {liveResult.final_result === "INCOMPLETE" ? (
+                      <p className="text-[11px] text-slate-500 text-center mt-1.5 font-medium">
+                        * Save complete marks for all subjects to enable publishing this student&apos;s result.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-emerald-700 text-center mt-1.5 font-medium">
+                        ✓ All marks saved. Click above to immediately publish this student&apos;s result live.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </form>

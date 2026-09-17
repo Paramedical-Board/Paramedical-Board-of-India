@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("student_registrations")
-    .select(isSecondYear ? "id, enrollment_no, candidate_name, roll_no:roll_no_2nd_year" : "id, enrollment_no, candidate_name, roll_no")
+    .select(isSecondYear ? "id, enrollment_no, candidate_name, roll_no:roll_no_2nd_year, result_published_2nd_year_at" : "id, enrollment_no, candidate_name, roll_no, result_published_at")
     .eq("course", courseName)
     .eq("status", "approved")
     .eq(isSecondYear ? "exam_session_id_2nd_year" : "exam_session_id", targetSessionId)
@@ -61,15 +61,26 @@ export async function GET(req: NextRequest) {
 
   const enrichedStudents = await Promise.all(
     (data ?? []).map(async (st) => {
+      const isPublished = isSecondYear
+        ? !!(st as any).result_published_2nd_year_at
+        : !!(st as any).result_published_at;
+      const publishedAt = isSecondYear
+        ? (st as any).result_published_2nd_year_at
+        : (st as any).result_published_at;
+
       if (!isSecondYear) {
         return {
           ...st,
+          is_published: isPublished,
+          published_at: publishedAt,
           first_year_passed: true,
         };
       }
       const check = await checkStudentFirstYearPassed(st.id);
       return {
         ...st,
+        is_published: isPublished,
+        published_at: publishedAt,
         first_year_passed: check.passed,
         first_year_reason: check.reason,
       };
