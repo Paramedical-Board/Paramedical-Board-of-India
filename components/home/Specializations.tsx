@@ -16,55 +16,55 @@ const specializations: SpecializationItem[] = [
     title: "Medical Lab Tech",
     image: "/Meditech1.jpeg",
     alt: "Medical Lab Tech",
-    href: "#",
+    href: "/careers/medical-lab-tech",
   },
   {
     id: 2,
     title: "Radiographer",
     image: "/Meditech2.jpeg",
     alt: "Radiographer",
-    href: "#",
+    href: "/careers/radiographer",
   },
   {
     id: 3,
     title: "Physiotherapist",
     image: "/Meditech3.jpeg",
     alt: "Physiotherapist",
-    href: "#",
+    href: "/careers/physiotherapist",
   },
   {
     id: 4,
     title: "Operation Theatre Tech",
     image: "/Meditech4.jpeg",
     alt: "Operation Theatre Tech",
-    href: "#",
+    href: "/careers/operation-theatre-tech",
   },
   {
     id: 5,
     title: "Dental Hygienist",
     image: "/Meditech5.jpeg",
     alt: "Dental Hygienist",
-    href: "#",
+    href: "/careers/dental-hygienist",
   },
   {
     id: 6,
     title: "Optometrist",
     image: "/Meditech6.jpeg",
     alt: "Optometrist",
-    href: "#",
+    href: "/careers/optometrist",
   },
   {
     id: 7,
     title: "Nursing Assistant",
     image: "/Meditech7.jpeg",
     alt: "Nursing Assistant",
-    href: "#",
+    href: "/careers/nursing-assistant",
   },
 ];
 
 export default function Specializations() {
   return (
-    <section className="w-full bg-white pt-6 sm:pt-8 md:pt-12 pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6 lg:px-8">
+    <section id="specializations" className="w-full bg-white pt-6 sm:pt-8 md:pt-12 pb-3 sm:pb-4 md:pb-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-[1440px] mx-auto">
         {/* Centered Heading with Decorative Lines */}
         <div className="flex items-center justify-center gap-2.5 sm:gap-4 mb-6 sm:mb-8 md:mb-10">
@@ -83,7 +83,10 @@ export default function Specializations() {
               className="group flex flex-col items-start text-left bg-transparent"
             >
               {/* Image Container */}
-              <div className="relative w-full aspect-[4/3] rounded-t-xl sm:rounded-xl overflow-hidden bg-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] group-hover:shadow-md transition-shadow duration-200">
+              <Link
+                href={item.href || "#"}
+                className="relative w-full aspect-[4/3] rounded-t-xl sm:rounded-xl overflow-hidden bg-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] group-hover:shadow-md transition-shadow duration-200 block"
+              >
                 <Image
                   src={item.image}
                   alt={item.alt}
@@ -91,13 +94,15 @@ export default function Specializations() {
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 14vw"
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-              </div>
+              </Link>
 
               {/* Title & Link */}
               <div className="pt-2 sm:pt-2.5 w-full flex flex-col items-start">
-                <h3 className="text-[12.5px] sm:text-[13.5px] lg:text-[14.5px] font-bold text-[#1A2B4A] leading-snug min-h-[34px] sm:min-h-[38px] line-clamp-2">
-                  {item.title}
-                </h3>
+                <Link href={item.href || "#"}>
+                  <h3 className="text-[12.5px] sm:text-[13.5px] lg:text-[14.5px] font-bold text-[#1A2B4A] hover:text-[#134275] transition-colors leading-snug min-h-[34px] sm:min-h-[38px] line-clamp-2">
+                    {item.title}
+                  </h3>
+                </Link>
 
                 <Link
                   href={item.href || "#"}

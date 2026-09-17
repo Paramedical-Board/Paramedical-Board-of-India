@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -17,6 +17,34 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileStudentCornerOpen, setMobileStudentCornerOpen] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hash = window.location.hash.substring(1);
+      const el = document.getElementById(hash);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 200);
+      }
+    }
+  }, [pathname]);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href?: string) => {
+    if (!href) return;
+    if (href.includes("#")) {
+      const hash = href.split("#")[1];
+      if (pathname === "/" || pathname === "") {
+        e.preventDefault();
+        const el = document.getElementById(hash);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          window.history.pushState(null, "", `#${hash}`);
+        }
+      }
+    }
+    setMobileMenuOpen(false);
+  };
+
   const menuItems: MenuItem[] = [
     { name: "Home", href: "/" },
     { name: "About Us", href: "/about-us" },
@@ -30,10 +58,9 @@ export default function Navbar() {
         { name: "Result / परिणाम", href: "/result" },
       ],
     },
-    { name: "Examinations", href: "#" },
-    { name: "Announcements", href: "#" },
+    { name: "Announcements", href: "/#announcements" },
     { name: "Results", href: "/result" },
-    { name: "Contact Us", href: "#" },
+    { name: "Contact Us", href: "/contact-us" },
   ];
 
   return (
@@ -108,12 +135,13 @@ export default function Navbar() {
             const isLinkActive =
               item.href === "/"
                 ? pathname === "/"
-                : item.href && item.href !== "#" && pathname.startsWith(item.href);
+                : item.href && item.href !== "#" && !item.href.startsWith("/#") && pathname.startsWith(item.href);
 
             return (
               <Link
                 key={item.name}
                 href={item.href || "#"}
+                onClick={(e) => handleNavClick(e, item.href)}
                 className={`px-3.5 sm:px-4 py-2 transition-all duration-150 rounded-[2px] flex items-center ${
                   isLinkActive
                     ? "bg-[#0d2a45] text-white font-bold border-b-2 border-[#D4AF37]"
@@ -193,13 +221,13 @@ export default function Navbar() {
               const isLinkActive =
                 item.href === "/"
                   ? pathname === "/"
-                  : item.href && item.href !== "#" && pathname.startsWith(item.href);
+                  : item.href && item.href !== "#" && !item.href.startsWith("/#") && pathname.startsWith(item.href);
 
               return (
                 <Link
                   key={item.name}
                   href={item.href || "#"}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={(e) => handleNavClick(e, item.href)}
                   className={`px-3 py-2.5 rounded-md transition-colors ${
                     isLinkActive
                       ? "bg-[#0d2a45] text-[#D4AF37] font-bold"

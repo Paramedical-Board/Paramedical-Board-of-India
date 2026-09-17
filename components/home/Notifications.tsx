@@ -107,7 +107,7 @@ const notifications: NotificationItem[] = [
 
 export default function Notifications() {
   return (
-    <section className="w-full bg-white pt-2 sm:pt-4 md:pt-6 pb-8 sm:pb-10 md:pb-12 px-4 sm:px-6 lg:px-8">
+    <section id="announcements" className="w-full bg-white pt-2 sm:pt-4 md:pt-6 pb-8 sm:pb-10 md:pb-12 px-4 sm:px-6 lg:px-8 scroll-mt-20 sm:scroll-mt-24">
       <div className="max-w-[1440px] mx-auto">
         {/* Centered Heading with Decorative Lines */}
         <div className="flex items-center justify-center gap-2.5 sm:gap-4 mb-6 sm:mb-8">

@@ -8,7 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --font-sans: var(--font-inter), var(--font-devanagari), "Noto Sans Devanagari", "Mukta", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --font-hindi: var(--font-devanagari), "Noto Sans Devanagari", "Mukta", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,10 +19,28 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Devanagari typography polish */
+.lang-hi {
+  font-family: var(--font-devanagari), "Noto Sans Devanagari", "Mukta", sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.lang-hi h1,
+.lang-hi h2,
+.lang-hi h3,
+.lang-hi h4 {
+  letter-spacing: 0.005em;
+  font-feature-settings: "kern" 1;
 }

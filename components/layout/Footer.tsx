@@ -1,6 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { FooterEmailLink, FooterWebLink } from "@/components/common/DynamicDomain";
 
 export default function Footer() {
   return (
@@ -40,8 +41,10 @@ export default function Footer() {
 
             {/* Instagram Modern Pill Badge */}
             <div className="pt-1">
-              <Link
-                href="#"
+              <a
+                href="https://www.instagram.com/indianparamedicalboardofindia"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2.5 bg-white/[0.08] hover:bg-white/[0.15] backdrop-blur-md border border-white/15 px-3 py-1.5 rounded-full transition-all duration-200 shadow-xs group max-w-full"
               >
                 <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#FD5949] via-[#D6249F] to-[#285AEB] flex items-center justify-center text-white shrink-0 shadow-xs group-hover:scale-105 transition-transform">
@@ -53,11 +56,11 @@ export default function Footer() {
                   <span className="text-[9.5px] text-[#A8C8EC] block leading-none">
                     Follow us on Instagram
                   </span>
-                  <span className="text-[11px] font-bold text-white tracking-wide leading-tight truncate block">
-                    @indianparamedicalboard
+                  <span className="text-[10.5px] font-bold text-white tracking-tight leading-tight truncate block">
+                    @indianparamedicalboardofindia
                   </span>
                 </div>
-              </Link>
+              </a>
             </div>
           </div>
 
@@ -82,16 +85,7 @@ export default function Footer() {
               </a>
 
               {/* Email */}
-              <a href="mailto:info@indianparamedicalboard.org" className="flex items-center gap-2.5 group cursor-pointer min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-white/[0.08] flex items-center justify-center text-[#E5C158] shrink-0 border border-white/10 group-hover:bg-[#E5C158] group-hover:text-[#0A2545] transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <span className="group-hover:text-white transition-colors text-[11.5px] truncate">
-                  info@indianparamedicalboard.org
-                </span>
-              </a>
+              <FooterEmailLink />
 
               {/* Location */}
               <div className="flex items-start gap-2.5 group min-w-0">
@@ -107,17 +101,7 @@ export default function Footer() {
               </div>
 
               {/* Website */}
-              <a href="https://www.indianparamedicalboard.org" className="flex items-center gap-2.5 group cursor-pointer min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-white/[0.08] flex items-center justify-center text-[#E5C158] shrink-0 border border-white/10 group-hover:bg-[#E5C158] group-hover:text-[#0A2545] transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 014-10z" />
-                  </svg>
-                </div>
-                <span className="group-hover:text-white transition-colors text-[11.5px] truncate">
-                  www.indianparamedicalboard.org
-                </span>
-              </a>
+              <FooterWebLink />
             </div>
           </div>
 
@@ -205,7 +189,9 @@ export default function Footer() {
             </h4>
 
             {/* Static Map Container - Mumbai / Bandra East */}
-            <div className="relative w-full h-[120px] rounded-xl bg-[#F5F2EC] overflow-hidden border border-white/25 p-2 flex flex-col justify-between shadow-md">
+            <div
+              className="relative w-full h-[120px] rounded-xl bg-[#F5F2EC] overflow-hidden border border-white/25 p-2 flex flex-col justify-between shadow-md select-none"
+            >
               {/* Map background SVG */}
               <svg
                 className="absolute inset-0 w-full h-full opacity-65 pointer-events-none"
@@ -231,7 +217,7 @@ export default function Footer() {
               </div>
 
               {/* Red Pin Tooltip in center */}
-              <div className="relative z-10 flex items-center gap-1 my-auto self-center bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-lg shadow-md border border-gray-200 hover:scale-105 transition-transform max-w-full">
+              <div className="relative z-10 flex items-center gap-1 my-auto self-center bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-lg shadow-md border border-gray-200 max-w-full">
                 <div className="w-3.5 h-3.5 text-[#DC2626] shrink-0 animate-bounce">
                   <svg className="w-full h-full fill-current" viewBox="0 0 24 24">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
@@ -364,7 +350,7 @@ export default function Footer() {
                 022 2346 3113
               </span>{" "}
               <span className="text-[#A8C8EC] text-[10px] font-normal">
-                (Mon – Fri: 10 AM - 6 PM)
+                (Mon – Fri: 10 AM - 5 PM)
               </span>
             </span>
           </a>

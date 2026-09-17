@@ -4,6 +4,7 @@ import AccreditationsBar from "@/components/home/AccreditationsBar";
 import StatsBar from "@/components/home/StatsBar";
 import CoreFunctions from "@/components/home/CoreFunctions";
 import Specializations from "@/components/home/Specializations";
+import NepalEquivalenceBanner from "@/components/home/NepalEquivalenceBanner";
 import Notifications from "@/components/home/Notifications";
 import KeyGuidelines from "@/components/home/KeyGuidelines";
 import Footer from "@/components/layout/Footer";
@@ -17,6 +18,7 @@ export default function Home() {
       <StatsBar />
       <CoreFunctions />
       <Specializations />
+      <NepalEquivalenceBanner />
       <Notifications />
       <KeyGuidelines />
 

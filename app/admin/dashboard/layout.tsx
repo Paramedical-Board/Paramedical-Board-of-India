@@ -74,6 +74,15 @@ export default async function AdminDashboardLayout({
               </svg>
               <span>Colleges / कॉलेज</span>
             </Link>
+            <Link
+              href="/admin/dashboard/inquiries"
+              className="px-3 py-1.5 rounded text-xs font-bold text-white/90 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              <span>Inquiries / पूछताछ</span>
+            </Link>
           </div>
 
           {/* Right: Logged-in Admin Info and Logout */}

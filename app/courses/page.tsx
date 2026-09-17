@@ -5,7 +5,7 @@ import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
-export interface CertificateCourse {
+export interface CourseItem {
   id: string;
   code: string;
   title: string;
@@ -19,7 +19,9 @@ export interface CertificateCourse {
   isFeatured?: boolean;
 }
 
-export const CERTIFICATE_COURSES_DATA: CertificateCourse[] = [
+export type CertificateCourse = CourseItem;
+
+export const CERTIFICATE_COURSES_DATA: CourseItem[] = [
   {
     id: "cmsed",
     code: "CMS & ED",
@@ -249,27 +251,223 @@ export const CERTIFICATE_COURSES_DATA: CertificateCourse[] = [
     description: "Hands-on practical training in aseptic wound cleaning, suture removal, surgical dressing, burn care, and antiseptic handling in clinical rooms.",
     careerScope: ["Hospital Minor Operation Rooms", "Emergency Wound Care Clinics", "Nursing Homes & Dispensaries", "Post-operative Care Units"],
   },
+  {
+    id: "cmcj",
+    code: "CMCJ",
+    title: "Certificate in Mass Communication and Journalism",
+    hindiTitle: "मास कम्युनिकेशन एवं जर्नलिज्म में सर्टिफिकेट",
+    category: "Specialized Care",
+    duration: "1 Year",
+    eligibility: "10th / 10+2 Pass",
+    mode: "Theory + Media Writing, Reporting & Digital Communication Practice",
+    description: "Provides foundational training in news reporting, print and broadcast media, public relations, digital content creation, media ethics, and newsroom workflow.",
+    careerScope: ["Print & Digital Media Houses", "News Agencies & Web Portals", "Public Relations & Media Units", "Corporate Communication Departments"],
+  },
 ];
 
-const CATEGORIES = [
-  "All Certificate Courses",
-  "Diagnostics & Lab",
-  "Radiology & Imaging",
-  "Clinical & OT Care",
-  "Community & Primary Health",
-  "Specialized Care",
-] as const;
+export const DIPLOMA_COURSES_DATA: CourseItem[] = [
+  {
+    id: "pcc-521",
+    code: "PCC-521",
+    title: "Diploma in Sanitary Inspector",
+    hindiTitle: "डिप्लोमा इन सेनेटरी इंस्पेक्टर",
+    category: "Specialized Care",
+    duration: "12 Months / 1 Year",
+    eligibility: "12th Pass",
+    mode: "Theory + Public Health & Sanitation Field Practice",
+    description: "Trains candidates in municipal hygiene management, bio-medical waste segregation, epidemic monitoring, water purification checks, and public health statutory inspections.",
+    careerScope: ["Municipal Corporations & City Councils", "Hospital Sanitation Departments", "Public Health Inspectorate", "Food & Safety Enforcement Wings"],
+  },
+  {
+    id: "pcc-522",
+    code: "PCC-522",
+    title: "Diploma in Lab Technician",
+    hindiTitle: "डिप्लोमा इन लैब तकनीशियन",
+    category: "Diagnostics & Lab",
+    duration: "12 Months / 1 Year",
+    eligibility: "12th Pass",
+    mode: "Theory + Hands-on Pathology & Clinical Biochemistry Lab",
+    description: "Comprehensive education in clinical pathology, hematological investigations, microbiology assays, serology, automated diagnostic equipment handling, and quality reporting.",
+    careerScope: ["Pathology Diagnostic Centers", "Hospital Clinical Laboratories", "Blood Sample Collection Networks", "Biochemical Research Labs"],
+  },
+  {
+    id: "pcc-523",
+    code: "PCC-523",
+    title: "Diploma in Dental Health Worker",
+    hindiTitle: "डिप्लोमा इन डेंटल हेल्थ वर्कर",
+    category: "Specialized Care",
+    duration: "24 Months / 2 Years",
+    eligibility: "12th Pass",
+    mode: "Theory + Dental Chair Assisting & Oral Care Practice",
+    description: "Focuses on chair-side dental assisting, autoclave sterilization protocols, patient oral hygiene instruction, dental impressions, and dental radiography assistance.",
+    careerScope: ["Dental Clinics & Polyclinics", "Dental Colleges & Teaching Hospitals", "Oral Hygiene Outreach Missions", "Dental Equipment Centers"],
+  },
+  {
+    id: "pcc-524",
+    code: "PCC-524",
+    title: "Diploma in Veterinary Assistant",
+    hindiTitle: "डिप्लोमा इन वेटरनरी असिस्टेंट",
+    category: "Specialized Care",
+    duration: "24 Months / 2 Years",
+    eligibility: "12th Pass",
+    mode: "Theory + Animal Healthcare & Veterinary Practice",
+    description: "Equips students with animal health evaluation, clinical care assistance, animal restraint techniques, wound dressing, vaccination management, and veterinary dispensary support.",
+    careerScope: ["Veterinary Hospitals & Dispensaries", "Government Animal Care Centers", "Livestock & Dairy Breeding Farms", "Animal Welfare Foundations"],
+  },
+  {
+    id: "pcc-525",
+    code: "PCC-525",
+    title: "Diploma in X - Ray Technician",
+    hindiTitle: "डिप्लोमा इन एक्स-रे तकनीशियन",
+    category: "Radiology & Imaging",
+    duration: "12 Months / 1 Year",
+    eligibility: "12th Pass",
+    mode: "Theory + Radiographic Equipment & Radiation Safety Training",
+    description: "Covers the operation of diagnostic X-ray apparatus, anatomical positioning, radiation shielding standards, digital radiography (DR/CR) systems, and medical image processing.",
+    careerScope: ["Radiology Imaging Centers", "Trauma & Emergency Care Units", "Government & Private Hospitals", "Orthopedic Clinics"],
+  },
+  {
+    id: "pcc-526",
+    code: "PCC-526",
+    title: "Diploma in Ayurvedic Pharmacy",
+    hindiTitle: "डिप्लोमा इन आयुर्वेदिक फार्मेसी",
+    category: "Specialized Care",
+    duration: "24 Months / 2 Years",
+    eligibility: "12th Pass",
+    mode: "Theory + Ayurvedic Formulation & Dispensary Training",
+    description: "Instruction in medicinal herb identification, classical Ayurvedic medicine preparation, extraction techniques, quality standardization, dispensing, and pharmacy inventory handling.",
+    careerScope: ["Ayurvedic Hospitals & Dispensaries", "Ayurvedic Pharmaceutical Units", "Wellness & Panchakarma Resorts", "Herbal Healthcare Chains"],
+  },
+  {
+    id: "pcc-527",
+    code: "PCC-527",
+    title: "D.N.A (Diploma in Nursing Assistant)",
+    hindiTitle: "डी.एन.ए (डिप्लोमा इन नर्सिंग असिस्टेंट)",
+    category: "Clinical & OT Care",
+    duration: "24 Months / 2 Years",
+    eligibility: "12th Pass",
+    mode: "Theory + In-Patient Bedside Nursing & Ward Care",
+    description: "Comprehensive training in bedside nursing assistance, patient vitals monitoring, medication delivery assistance, catheter care, hygiene maintenance, and emergency casualty support.",
+    careerScope: ["Multispeciality Hospital In-patient Wards", "Intensive Care Units (ICU)", "Private Nursing Homes", "Geriatric Care & Assisted Living Centers"],
+  },
+  {
+    id: "pcc-528",
+    code: "PCC-528",
+    title: "DVP (Diploma in veterinary Pharmacy)",
+    hindiTitle: "डीवीपी (डिप्लोमा इन वेटरनरी फार्मेसी)",
+    category: "Specialized Care",
+    duration: "24 Months / 2 Years",
+    eligibility: "12th Pass",
+    mode: "Theory + Veterinary Pharmacology & Drug Dispensing",
+    description: "Focuses on veterinary pharmacology, animal drug dosage calculation, vaccine cold-chain management, compounding animal medications, and veterinary pharmacy management.",
+    careerScope: ["Veterinary Medical Stores & Pharmacies", "Animal Husbandry Departments", "Dairy Cooperatives & Ranches", "Veterinary Drug Distributors"],
+  },
+  {
+    id: "pcc-529",
+    code: "PCC-529",
+    title: "DWB (Diploma in Ward Boy)",
+    hindiTitle: "डीडब्ल्यूबी (डिप्लोमा इन वार्ड बॉय)",
+    category: "Clinical & OT Care",
+    duration: "12 Months / 1 Year",
+    eligibility: "12th Pass",
+    mode: "Theory + Ward Care & Patient Mobility Training",
+    description: "Teaches essential hospital ward duties including patient mobility and stretcher transfer, bed making, medical utility sterilization, specimen transport, and hospital hygiene.",
+    careerScope: ["Hospital General & Emergency Wards", "Casualty & Trauma Centers", "Orthopedic In-Patient Units", "Private Nursing Homes"],
+  },
+  {
+    id: "pcc-530",
+    code: "PCC-530",
+    title: "Diploma in First Aid in Emergency",
+    hindiTitle: "डिप्लोमा इन फर्स्ट एड इन इमरजेंसी",
+    category: "Community & Primary Health",
+    duration: "24 Months / 2 Years",
+    eligibility: "12th Pass",
+    mode: "Practical Trauma Life Support & Emergency Resuscitation Drills",
+    description: "Intensive training in acute pre-hospital trauma response, CPR life support, airway resuscitation, hemorrhage control, triage protocol, and emergency ambulance operations.",
+    careerScope: ["Emergency Ambulance Services", "Disaster Response Teams", "Industrial First Aid Stations", "Hospital Casualty Departments"],
+  },
+  {
+    id: "pcc-531",
+    code: "PCC-531",
+    title: "Diploma in Radiology Imaging Technology (DRIT)",
+    hindiTitle: "डिप्लोमा इन रेडियोलॉजी इमेजिंग टेक्नोलॉजी (डीआरआईटी)",
+    category: "Radiology & Imaging",
+    duration: "24 Months / 2 Years",
+    eligibility: "12th Pass",
+    mode: "Theory + Advanced CT, MRI & Digital X-Ray Practicals",
+    description: "Advanced paramedical imaging training encompassing Computed Tomography (CT), Magnetic Resonance Imaging (MRI), digital fluoroscopy, radiation dosimetry, and advanced radiographic diagnostics.",
+    careerScope: ["Super-Speciality Radiology Departments", "Advanced MRI/CT Imaging Chains", "Cancer & Oncology Imaging Centers", "Trauma Institutes"],
+    isFeatured: true,
+  },
+  {
+    id: "pcc-532",
+    code: "PCC-532",
+    title: "Diploma in Hospitality",
+    hindiTitle: "डिप्लोमा इन हॉस्पिटल / हेल्थकेयर हॉस्पिटैलिटी",
+    category: "Specialized Care",
+    duration: "12 Months / 1 Year",
+    eligibility: "12th Pass",
+    mode: "Theory + Healthcare Frontline Hospitality & Ward Services",
+    description: "Instruction in patient reception, hospital front-office hospitality, patient experience management, ward concierge services, medical tourism guidance, and healthcare administration.",
+    careerScope: ["Multispeciality Hospital Administration", "Medical Tourism Companies", "Executive Healthcare Suites", "Private Healthcare Hospitality Units"],
+  },
+  {
+    id: "pcc-533",
+    code: "PCC-533",
+    title: "Diploma in Operation Theater Technician- DOTT",
+    hindiTitle: "डिप्लोमा इन ऑपरेशन थिएटर तकनीशियन (डीओटीटी)",
+    category: "Clinical & OT Care",
+    duration: "24 Months / 2 Years",
+    eligibility: "12th Pass",
+    mode: "Theory + Advanced Surgical Assisting & OT Protocols Training",
+    description: "Prepares specialized OT professionals for sterile surgical suite setup, anesthesia machine monitoring, surgical tray preparation, intra-operative assistance to surgeons, and post-surgery patient care.",
+    careerScope: ["Major Hospital Operation Theatres", "Surgical Intensive Care Units (ICU)", "Cardiac & Neuro Surgery Theatres", "Ambulatory Surgical Centers"],
+  },
+  {
+    id: "pcc-534",
+    code: "PCC-534",
+    title: "Diploma in Mass Communication and Journalism (DMCJ)",
+    hindiTitle: "डिप्लोमा इन मास कम्युनिकेशन एवं जर्नलिज्म (डीएमसीजे)",
+    category: "Specialized Care",
+    duration: "1 Year / 12 Months",
+    eligibility: "12th Pass",
+    mode: "Theory + News Reporting, Editing & Multimedia Broadcast Practicals",
+    description: "Comprehensive curriculum covering investigative journalism, digital media production, audio-visual broadcasting, mass communication theories, corporate PR, and editorial management.",
+    careerScope: ["Television & Broadcast Media Networks", "National & Regional Newspapers", "Digital Journalism & Media Outlets", "Public Relations & Brand Agencies"],
+  },
+];
 
 export default function CoursesPage() {
+  const [activeTab, setActiveTab] = useState<"certificate" | "diploma">("certificate");
   const [selectedCategory, setSelectedCategory] = useState<string>("All Certificate Courses");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
+  // Current active dataset
+  const currentDataset = activeTab === "certificate" ? CERTIFICATE_COURSES_DATA : DIPLOMA_COURSES_DATA;
+  const allCategoryLabel = activeTab === "certificate" ? "All Certificate Courses" : "All Diploma Courses";
+
+  const categories = useMemo(() => [
+    allCategoryLabel,
+    "Diagnostics & Lab",
+    "Radiology & Imaging",
+    "Clinical & OT Care",
+    "Community & Primary Health",
+    "Specialized Care",
+  ], [allCategoryLabel]);
+
+  // Tab change handler
+  const handleTabChange = (tab: "certificate" | "diploma") => {
+    setActiveTab(tab);
+    setSelectedCategory(tab === "certificate" ? "All Certificate Courses" : "All Diploma Courses");
+    setSearchQuery("");
+  };
+
   // Filter courses based on category and search query
   const filteredCourses = useMemo(() => {
-    return CERTIFICATE_COURSES_DATA.filter((course) => {
+    return currentDataset.filter((course) => {
       const matchesCategory =
-        selectedCategory === "All Certificate Courses" || course.category === selectedCategory;
+        selectedCategory === allCategoryLabel || course.category === selectedCategory;
 
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -282,7 +480,7 @@ export default function CoursesPage() {
 
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [currentDataset, selectedCategory, allCategoryLabel, searchQuery]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
@@ -296,6 +494,51 @@ export default function CoursesPage() {
         <div className="absolute bottom-0 left-1/4 -mb-10 w-96 h-96 rounded-full bg-[#D4AF37]/10 blur-3xl pointer-events-none" />
 
         <div className="max-w-[1280px] mx-auto relative z-10">
+          {/* Top-Right Floating Program Switcher */}
+          <div className="sm:absolute sm:top-0 sm:right-0 mb-4 sm:mb-0 flex justify-end z-20">
+            <div className="inline-flex p-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xs">
+              <button
+                type="button"
+                onClick={() => handleTabChange("certificate")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 cursor-pointer ${
+                  activeTab === "certificate"
+                    ? "bg-white text-[#0A2545] shadow-sm font-black"
+                    : "text-slate-200 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Certificate</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  activeTab === "certificate" ? "bg-[#0A2545]/10 text-[#0A2545]" : "bg-white/15 text-slate-200"
+                }`}>
+                  {CERTIFICATE_COURSES_DATA.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange("diploma")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 cursor-pointer ${
+                  activeTab === "diploma"
+                    ? "bg-white text-[#0A2545] shadow-sm font-black"
+                    : "text-slate-200 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+                </svg>
+                <span>Diploma</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  activeTab === "diploma" ? "bg-[#0A2545]/10 text-[#0A2545]" : "bg-white/15 text-slate-200"
+                }`}>
+                  {DIPLOMA_COURSES_DATA.length}
+                </span>
+              </button>
+            </div>
+          </div>
+
           {/* Breadcrumb Bar */}
           <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-300 mb-4">
             <Link
@@ -308,7 +551,9 @@ export default function CoursesPage() {
               Home
             </Link>
             <span className="text-slate-500">/</span>
-            <span className="text-[#E5C158] font-semibold">Certificate Courses</span>
+            <span className="text-[#E5C158] font-semibold">
+              {activeTab === "certificate" ? "Certificate Courses" : "Diploma Courses"}
+            </span>
           </nav>
 
           {/* Banner Title */}
@@ -319,20 +564,24 @@ export default function CoursesPage() {
                 Industry-Recognized Programs
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight uppercase text-white font-sans">
-                Certificate Courses
+                {activeTab === "certificate" ? "Certificate Courses" : "Diploma Courses"}
               </h1>
               <p className="text-sm sm:text-base text-slate-200 mt-2 max-w-2xl leading-relaxed">
-                Skill-based, job-oriented paramedical certificate programs standardized for hospital, diagnostic laboratory, and clinical careers across India.
+                {activeTab === "certificate"
+                  ? "Skill-based, job-oriented paramedical certificate programs standardized for hospital, diagnostic laboratory, and clinical careers across India."
+                  : "Standardized 1-Year and 2-Year paramedical diploma programs designed for advanced diagnostic, clinical care, and specialized medical professions across India."}
               </p>
             </div>
 
             {/* Total Courses Metric Pill */}
             <div className="bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3 rounded-2xl flex items-center gap-4 self-start md:self-auto">
               <div className="w-12 h-12 rounded-xl bg-[#E5C158] text-[#0A2545] flex items-center justify-center font-black text-xl shadow-md">
-                19
+                {currentDataset.length}
               </div>
               <div>
-                <div className="text-sm font-bold text-white">Certificate Programs</div>
+                <div className="text-sm font-bold text-white">
+                  {activeTab === "certificate" ? "Certificate Programs" : "Diploma Programs"}
+                </div>
                 <div className="text-xs text-slate-300">Standardized Curricula</div>
               </div>
             </div>
@@ -344,64 +593,119 @@ export default function CoursesPage() {
       <main className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         
         {/* ======================================================== */}
-        {/* FEATURED COURSE SPOTLIGHT BANNER: CCMS & ED              */}
+        {/* FEATURED COURSE SPOTLIGHT BANNER                          */}
         {/* ======================================================== */}
-        <section className="bg-gradient-to-br from-[#143E66] via-[#103456] to-[#0A2545] rounded-2xl p-6 sm:p-8 lg:p-9 text-white shadow-md relative overflow-hidden mb-8">
-          {/* Gold Glow Accent */}
-          <div className="absolute top-0 right-0 w-72 h-72 bg-[#D4AF37]/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-10 left-1/3 w-60 h-60 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+        {activeTab === "certificate" ? (
+          <section className="bg-gradient-to-br from-[#143E66] via-[#103456] to-[#0A2545] rounded-2xl p-6 sm:p-8 lg:p-9 text-white shadow-md relative overflow-hidden mb-8">
+            {/* Gold Glow Accent */}
+            <div className="absolute top-0 right-0 w-72 h-72 bg-[#D4AF37]/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 left-1/3 w-60 h-60 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-8">
-            
-            {/* Left: Course Branding & Overview */}
-            <div className="flex-1 max-w-2xl">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-slate-200 border border-white/15">
-                  Course Code: CMS &amp; ED
-                </span>
+            <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-8">
+              {/* Left: Course Branding & Overview */}
+              <div className="flex-1 max-w-2xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-slate-200 border border-white/15">
+                    Course Code: CMS &amp; ED
+                  </span>
+                </div>
+
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-snug">
+                  Community Medical Services &amp; Essential Drugs
+                </h2>
+
+                <p className="text-sm sm:text-base font-semibold text-[#F1E4C3] mt-1.5">
+                  कम्युनिटी मेडिकल सर्विसेज एवं एसेंशियल ड्रग्स
+                </p>
+
+                <p className="text-xs sm:text-sm text-slate-200 mt-3 leading-relaxed">
+                  Prepares qualified primary healthcare workers for delivering primary treatment, essential drug guidance, and preventive health services across rural and community clinics under standardized guidelines.
+                </p>
               </div>
 
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-snug">
-                Community Medical Services &amp; Essential Drugs
-              </h2>
+              {/* Right: 4 Fast Spec Grid Pills */}
+              <div className="w-full lg:w-auto shrink-0 grid grid-cols-2 gap-3 min-w-[280px] sm:min-w-[320px]">
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
+                  <span className="text-[11px] text-slate-300 block font-medium">Program Duration</span>
+                  <strong className="text-sm font-bold text-[#E5C158]">1 Year / 18 Months</strong>
+                </div>
 
-              <p className="text-sm sm:text-base font-semibold text-[#F1E4C3] mt-1.5">
-                कम्युनिटी मेडिकल सर्विसेज एवं एसेंशियल ड्रग्स
-              </p>
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
+                  <span className="text-[11px] text-slate-300 block font-medium">Eligibility Criteria</span>
+                  <strong className="text-sm font-bold text-white">10th / 10+2 Pass</strong>
+                </div>
 
-              <p className="text-xs sm:text-sm text-slate-200 mt-3 leading-relaxed">
-                Prepares qualified primary healthcare workers for delivering primary treatment, essential drug guidance, and preventive health services across rural and community clinics under standardized guidelines.
-              </p>
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
+                  <span className="text-[11px] text-slate-300 block font-medium">Practice Scope</span>
+                  <strong className="text-sm font-bold text-white">Rural &amp; Primary Clinics</strong>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
+                  <span className="text-[11px] text-slate-300 block font-medium">Accreditation</span>
+                  <strong className="text-sm font-bold text-emerald-300 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    IPBI Certified
+                  </strong>
+                </div>
+              </div>
             </div>
+          </section>
+        ) : (
+          <section className="bg-gradient-to-br from-[#143E66] via-[#103456] to-[#0A2545] rounded-2xl p-6 sm:p-8 lg:p-9 text-white shadow-md relative overflow-hidden mb-8">
+            {/* Gold Glow Accent */}
+            <div className="absolute top-0 right-0 w-72 h-72 bg-[#D4AF37]/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 left-1/3 w-60 h-60 bg-blue-400/10 rounded-full blur-2xl pointer-events-none" />
 
-            {/* Right: 4 Fast Spec Grid Pills */}
-            <div className="w-full lg:w-auto shrink-0 grid grid-cols-2 gap-3 min-w-[280px] sm:min-w-[320px]">
-              <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
-                <span className="text-[11px] text-slate-300 block font-medium">Program Duration</span>
-                <strong className="text-sm font-bold text-[#E5C158]">1 Year / 18 Months</strong>
+            <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 lg:gap-8">
+              {/* Left: Course Branding & Overview */}
+              <div className="flex-1 max-w-2xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-slate-200 border border-white/15">
+                    Course Code: PCC-531 (DRIT)
+                  </span>
+                </div>
+
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-snug">
+                  Diploma in Radiology Imaging Technology (DRIT)
+                </h2>
+
+                <p className="text-sm sm:text-base font-semibold text-[#F1E4C3] mt-1.5">
+                  डिप्लोमा इन रेडियोलॉजी इमेजिंग टेक्नोलॉजी (डीआरआईटी)
+                </p>
+
+                <p className="text-xs sm:text-sm text-slate-200 mt-3 leading-relaxed">
+                  Advanced paramedical imaging training encompassing Computed Tomography (CT), Magnetic Resonance Imaging (MRI), digital fluoroscopy, radiation dosimetry, and cross-sectional radiographic diagnostics.
+                </p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
-                <span className="text-[11px] text-slate-300 block font-medium">Eligibility Criteria</span>
-                <strong className="text-sm font-bold text-white">10th / 10+2 Pass</strong>
-              </div>
+              {/* Right: 4 Fast Spec Grid Pills */}
+              <div className="w-full lg:w-auto shrink-0 grid grid-cols-2 gap-3 min-w-[280px] sm:min-w-[320px]">
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
+                  <span className="text-[11px] text-slate-300 block font-medium">Program Duration</span>
+                  <strong className="text-sm font-bold text-[#E5C158]">24 Months / 2 Years</strong>
+                </div>
 
-              <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
-                <span className="text-[11px] text-slate-300 block font-medium">Practice Scope</span>
-                <strong className="text-sm font-bold text-white">Rural &amp; Primary Clinics</strong>
-              </div>
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
+                  <span className="text-[11px] text-slate-300 block font-medium">Eligibility Criteria</span>
+                  <strong className="text-sm font-bold text-white">12th Pass</strong>
+                </div>
 
-              <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
-                <span className="text-[11px] text-slate-300 block font-medium">Accreditation</span>
-                <strong className="text-sm font-bold text-emerald-300 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  IPBI Certified
-                </strong>
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
+                  <span className="text-[11px] text-slate-300 block font-medium">Practice Scope</span>
+                  <strong className="text-sm font-bold text-white">Diagnostic &amp; Trauma Imaging</strong>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3">
+                  <span className="text-[11px] text-slate-300 block font-medium">Accreditation</span>
+                  <strong className="text-sm font-bold text-emerald-300 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    IPBI Certified
+                  </strong>
+                </div>
               </div>
             </div>
-
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Search & Filter Bar */}
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6 mb-8">
@@ -413,7 +717,11 @@ export default function CoursesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search certificate course by name or code (e.g. CMLT, Dialysis, ECG)..."
+                placeholder={
+                  activeTab === "certificate"
+                    ? "Search certificate course by name or code (e.g. CMLT, Dialysis, ECG)..."
+                    : "Search diploma course by name or code (e.g. DOTT, DRIT, DMLT, 521)..."
+                }
                 className="w-full pl-10 pr-4 py-2.5 bg-[#F8FAFC] border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#143E66]/20 focus:border-[#143E66] transition-all"
               />
               <svg
@@ -428,7 +736,7 @@ export default function CoursesPage() {
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 bg-slate-200 rounded-full w-4 h-4 flex items-center justify-center"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 bg-slate-200 rounded-full w-4 h-4 flex items-center justify-center cursor-pointer"
                 >
                   ✕
                 </button>
@@ -441,7 +749,7 @@ export default function CoursesPage() {
               <button
                 type="button"
                 onClick={() => setViewMode("grid")}
-                className={`p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                className={`p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                   viewMode === "grid"
                     ? "bg-[#143E66] text-white border-[#143E66] shadow-2xs"
                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
@@ -455,7 +763,7 @@ export default function CoursesPage() {
               <button
                 type="button"
                 onClick={() => setViewMode("table")}
-                className={`p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                className={`p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                   viewMode === "table"
                     ? "bg-[#143E66] text-white border-[#143E66] shadow-2xs"
                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
@@ -472,14 +780,14 @@ export default function CoursesPage() {
 
           {/* Category Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto pt-4 no-scrollbar">
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const isActive = selectedCategory === cat;
               return (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     isActive
                       ? "bg-[#143E66] text-white shadow-xs"
                       : "bg-[#F1F5F9] text-slate-700 hover:bg-slate-200/80"
@@ -495,16 +803,17 @@ export default function CoursesPage() {
         {/* Results Count Bar */}
         <div className="flex items-center justify-between mb-6 text-xs sm:text-sm text-slate-600">
           <div>
-            Showing <strong className="text-[#143E66]">{filteredCourses.length}</strong> of {CERTIFICATE_COURSES_DATA.length} Certificate Courses
+            Showing <strong className="text-[#143E66]">{filteredCourses.length}</strong> of {currentDataset.length}{" "}
+            {activeTab === "certificate" ? "Certificate Courses" : "Diploma Courses"}
           </div>
-          {searchQuery && (
+          {(searchQuery || selectedCategory !== allCategoryLabel) && (
             <button
               type="button"
               onClick={() => {
                 setSearchQuery("");
-                setSelectedCategory("All Certificate Courses");
+                setSelectedCategory(allCategoryLabel);
               }}
-              className="text-[#8B1F13] font-bold hover:underline text-xs"
+              className="text-[#8B1F13] font-bold hover:underline text-xs cursor-pointer"
             >
               Reset Filters
             </button>
@@ -688,7 +997,7 @@ export default function CoursesPage() {
               🔍
             </div>
             <h3 className="text-base font-bold text-slate-800 mb-1">
-              No Certificate Courses Found
+              No {activeTab === "certificate" ? "Certificate" : "Diploma"} Courses Found
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
               No courses match your current search or category filter. Try clearing the search query.
@@ -697,9 +1006,9 @@ export default function CoursesPage() {
               type="button"
               onClick={() => {
                 setSearchQuery("");
-                setSelectedCategory("All Certificate Courses");
+                setSelectedCategory(allCategoryLabel);
               }}
-              className="px-4 py-2 rounded-lg bg-[#143E66] text-white text-xs font-bold hover:bg-[#0d2a45] transition-colors"
+              className="px-4 py-2 rounded-lg bg-[#143E66] text-white text-xs font-bold hover:bg-[#0d2a45] transition-colors cursor-pointer"
             >
               Reset Search &amp; Filters
             </button>
@@ -718,7 +1027,7 @@ export default function CoursesPage() {
                 Institutional Paramedical Network
               </div>
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
-                Want to Enroll in a Paramedical Certificate Course?
+                Want to Enroll in a Paramedical {activeTab === "certificate" ? "Certificate" : "Diploma"} Course?
               </h2>
               <p className="text-xs sm:text-sm text-slate-200 max-w-2xl leading-relaxed">
                 Candidate admissions and enrollment registrations are processed directly through authorized affiliated institutions across India.

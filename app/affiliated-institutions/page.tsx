@@ -57,6 +57,7 @@ export const AFFILIATED_INSTITUTIONS_DATA: AffiliatedInstitution[] = [
       "Dialysis Technician (CDT)",
       "Radiology & Imaging (CMRIT)",
       "Emergency Medical Technician (CEMT)",
+      "Community Medical Services & Essential Drugs (CMS & ED)",
       "Community Health (CCOMH)",
     ],
     contactPerson: "Principal / Director",
