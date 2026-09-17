@@ -119,6 +119,7 @@ export default function Hero() {
         <div className="max-w-xl lg:max-w-2xl">
           {/* 3-Line Heading strictly matching colors and typography */}
           <h1 className="font-sans font-black tracking-[-0.02em] text-[24px] sm:text-[30px] md:text-[36px] lg:text-[40px] xl:text-[44px] leading-[1.14] uppercase select-none">
+            <span className="sr-only">Indian Paramedical Board of India — </span>
             {/* Line 1: PARAMEDICAL EDUCATION & (Blue #143E66) */}
             <span className="block text-[#143E66] sm:whitespace-nowrap">
               PARAMEDICAL EDUCATION &amp;
