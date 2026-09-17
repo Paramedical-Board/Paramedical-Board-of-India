@@ -1,16 +1,24 @@
 import React from "react";
-import { UseFormRegister, FieldErrors } from "react-hook-form";
-import {
-  StudentRegistrationFormData,
-  PARAMEDICAL_COURSES,
-} from "./registrationSchema";
+import { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from "react-hook-form";
+import { StudentRegistrationFormData } from "./registrationSchema";
+import CourseSelectorDropdown from "@/components/common/CourseSelectorDropdown";
 
 interface Props {
   register: UseFormRegister<StudentRegistrationFormData>;
   errors: FieldErrors<StudentRegistrationFormData>;
+  setValue?: UseFormSetValue<StudentRegistrationFormData>;
+  watch?: UseFormWatch<StudentRegistrationFormData>;
 }
 
-export default function CourseDetailsSection({ register, errors }: Props) {
+export default function CourseDetailsSection({ register, errors, setValue, watch }: Props) {
+  const currentCourse = watch ? watch("course") : "";
+
+  const handleCourseChange = (selected: string) => {
+    if (setValue) {
+      setValue("course", selected, { shouldValidate: true, shouldDirty: true });
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg border border-slate-200/90 shadow-sm overflow-hidden mb-6">
       {/* Section Header */}
@@ -30,32 +38,19 @@ export default function CourseDetailsSection({ register, errors }: Props) {
           <label className="block text-xs sm:text-[13px] font-semibold text-slate-800 mb-1.5">
             Select Course / पाठ्यक्रम चुनें <span className="text-[#B13B1C]">*</span>
           </label>
-          <select
-            defaultValue=""
-            className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
-              errors.course
-                ? "border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
-                : "border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"
-            }`}
-            {...register("course")}
-          >
-            <option value="" disabled>
-              -- Select Desired Paramedical Certificate Program --
-            </option>
-            {PARAMEDICAL_COURSES.map((crs) => (
-              <option key={crs} value={crs}>
-                {crs}
-              </option>
-            ))}
-          </select>
-          {errors.course && (
-            <p className="text-xs text-[#B13B1C] font-medium mt-1">
-              {errors.course.message}
-            </p>
-          )}
-          <p className="text-[11px] text-slate-500 mt-2">
-            ℹ Note: Ensure you meet the minimum educational eligibility criteria (10th / 10+2 or equivalent) for the selected certificate program.
-          </p>
+
+          {/* Hidden input for react-hook-form registration & validation */}
+          <input type="hidden" {...register("course")} />
+
+          {/* Custom Searchable Dropdown */}
+          <CourseSelectorDropdown
+            value={currentCourse || ""}
+            onChange={handleCourseChange}
+            hasError={!!errors.course}
+            errorMessage={errors.course?.message}
+            placeholder="-- Select Desired Paramedical Program (Diploma / Certificate) --"
+            helperText="ℹ Note: Ensure you meet the minimum educational eligibility criteria (10th / 10+2 or equivalent) for the selected diploma or certificate program."
+          />
         </div>
       </div>
     </div>

@@ -611,7 +611,12 @@ export default function RegistrationForm({
           />
 
           {/* 3. Course Details */}
-          <CourseDetailsSection register={register} errors={errors} />
+          <CourseDetailsSection
+            register={register}
+            errors={errors}
+            watch={watch}
+            setValue={setValue}
+          />
 
           {/* 4. Education Table */}
           <EducationTable

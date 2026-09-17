@@ -149,7 +149,24 @@ export const INDIAN_STATES = [
   "West Bengal",
 ];
 
-export const PARAMEDICAL_COURSES = [
+export const DIPLOMA_COURSES = [
+  "Diploma in Sanitary Inspector (PCC-521)",
+  "Diploma in Lab Technician (PCC-522)",
+  "Diploma in Dental Health Worker (PCC-523)",
+  "Diploma in Veterinary Assistant (PCC-524)",
+  "Diploma in X - Ray Technician (PCC-525)",
+  "Diploma in Ayurvedic Pharmacy (PCC-526)",
+  "D.N.A (Diploma in Nursing Assistant) (PCC-527)",
+  "DVP (Diploma in veterinary Pharmacy) (PCC-528)",
+  "DWB (Diploma in Ward Boy) (PCC-529)",
+  "Diploma in First Aid in Emergency (PCC-530)",
+  "Diploma in Radiology Imaging Technology (DRIT) (PCC-531)",
+  "Diploma in Hospitality (PCC-532)",
+  "Diploma in Operation Theater Technician- DOTT (PCC-533)",
+  "Diploma in Mass Communication and Journalism (DMCJ) (PCC-534)",
+];
+
+export const CERTIFICATE_COURSES = [
   "Certificate in Medical Laboratory Technology (CMLT)",
   "Certificate in Operation Theatre Technology (COTT)",
   "Certificate in Dialysis Technician (CDT)",
@@ -169,6 +186,12 @@ export const PARAMEDICAL_COURSES = [
   "Certificate in CT Scan Technician (Cert. CT Scan)",
   "Certificate in Sanitary Inspector (CSI)",
   "Certificate in Medical Dressing (CMD)",
+  "Certificate in Mass Communication and Journalism (CMCJ)",
+];
+
+export const PARAMEDICAL_COURSES = [
+  ...DIPLOMA_COURSES,
+  ...CERTIFICATE_COURSES,
 ];
 
 export const CATEGORIES = ["General", "OBC", "SC", "ST", "EWS"] as const;

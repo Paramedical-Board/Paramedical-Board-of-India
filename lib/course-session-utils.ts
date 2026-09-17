@@ -9,12 +9,41 @@ export const TWO_YEAR_COURSES = [
   "Community Medical Services & Essential Drugs (CMS & ED)",
   "Certificate in Dental Technician & Hygienist (CDTH)",
   "Certificate in Multipurpose Health Worker (CMHW)",
+  // 2-Year Diploma Courses
+  "Diploma in Dental Health Worker (PCC-523)",
+  "Diploma in Veterinary Assistant (PCC-524)",
+  "Diploma in Ayurvedic Pharmacy (PCC-526)",
+  "D.N.A (Diploma in Nursing Assistant) (PCC-527)",
+  "DVP (Diploma in veterinary Pharmacy) (PCC-528)",
+  "Diploma in First Aid in Emergency (PCC-530)",
+  "Diploma in Radiology Imaging Technology (DRIT) (PCC-531)",
+  "Diploma in Operation Theater Technician- DOTT (PCC-533)",
 ];
 
 export function isTwoYearCourse(courseName: string): boolean {
+  if (!courseName) return false;
+  const twoYearKeywords = [
+    "cmlt",
+    "cott",
+    "cmrit",
+    "cms & ed",
+    "cdth",
+    "cmhw",
+    "pcc-523",
+    "pcc-524",
+    "pcc-526",
+    "pcc-527",
+    "pcc-528",
+    "pcc-530",
+    "pcc-531",
+    "pcc-533",
+  ];
+  const lower = courseName.toLowerCase();
+  if (twoYearKeywords.some((kw) => lower.includes(kw))) {
+    return true;
+  }
   return TWO_YEAR_COURSES.some((c) =>
-    courseName.toLowerCase().includes(c.toLowerCase()) ||
-    c.toLowerCase().includes(courseName.toLowerCase())
+    lower.includes(c.toLowerCase()) || c.toLowerCase().includes(lower)
   );
 }
 

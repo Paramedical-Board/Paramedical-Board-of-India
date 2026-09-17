@@ -3,7 +3,12 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PARAMEDICAL_COURSES } from "@/components/student/registration/registrationSchema";
+import {
+  PARAMEDICAL_COURSES,
+  DIPLOMA_COURSES,
+  CERTIFICATE_COURSES,
+} from "@/components/student/registration/registrationSchema";
+import CourseSelectorDropdown from "@/components/common/CourseSelectorDropdown";
 import {
   getCourseSessionOptions,
   isTwoYearCourse,
@@ -885,17 +890,11 @@ export default function ExamManagementHubPage() {
                 {is2Year ? "2 Years Duration" : "1 Year Duration"}
               </span>
             </div>
-            <select
+            <CourseSelectorDropdown
               value={selectedCourse}
-              onChange={(e) => handleCourseChange(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-[#143E66] focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
-            >
-              {PARAMEDICAL_COURSES.map((course) => (
-                <option key={course} value={course}>
-                  {course}
-                </option>
-              ))}
-            </select>
+              onChange={handleCourseChange}
+              buttonClassName="font-bold text-[#143E66] border-slate-300"
+            />
           </div>
 
           {/* 2. Academic Session Selector (Dynamic based on course duration) */}
