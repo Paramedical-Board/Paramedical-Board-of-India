@@ -28,15 +28,30 @@ export async function POST(req: NextRequest) {
 
   const reg = regList[0];
 
-  // Determine year number from matched roll number or requested year
-  let yrNum = 1;
-  if (reg.roll_no_2nd_year && reg.roll_no_2nd_year.trim() === roll_no.trim()) {
-    yrNum = 2;
-  } else if (reg.roll_no && reg.roll_no.trim() === roll_no.trim()) {
-    yrNum = 1;
-  } else if (year && (year.includes("2") || year.toLowerCase().includes("2nd"))) {
-    yrNum = 2;
+  // Determine which field the roll number actually matched
+  let matchedYear = null;
+  if (reg.roll_no && reg.roll_no.trim() === roll_no.trim()) {
+    matchedYear = 1;
+  } else if (reg.roll_no_2nd_year && reg.roll_no_2nd_year.trim() === roll_no.trim()) {
+    matchedYear = 2;
   }
+
+  // Determine which year the student selected in the form
+  const requestedYear =
+    year && (year.includes("2") || year.toLowerCase().includes("2nd")) ? 2 : 1;
+
+  // Reject if the roll number doesn't belong to the selected examination year
+  if (matchedYear === null || matchedYear !== requestedYear) {
+    return NextResponse.json(
+      {
+        error:
+          "Result not available. Please check your Roll Number, Date of Birth, and selected Examination Year.",
+      },
+      { status: 404 }
+    );
+  }
+
+  const yrNum = matchedYear;
 
   const targetSessionId = yrNum === 2 ? (reg.exam_session_id_2nd_year || reg.exam_session_id) : reg.exam_session_id;
 
