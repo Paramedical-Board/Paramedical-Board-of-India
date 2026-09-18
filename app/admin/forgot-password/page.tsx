@@ -256,7 +256,7 @@ export default function ForgotPasswordPage() {
 
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-slate-500 border-t border-slate-200">
-        © {new Date().getFullYear()} Indian Paramedical Board of India. All rights reserved.
+        © 2023 Indian Paramedical Board of India. All rights reserved.
       </footer>
     </div>
   );

@@ -65,7 +65,7 @@ export default async function AdminDashboardLayout({
                 022 2346 3113
               </span>{" "}
               <span className="text-[#A8C8EC] text-[10px] font-normal">
-                (Mon – Fri: 10 AM - 6 PM)
+                (Mon – Fri: 10 AM - 5 PM)
               </span>
             </span>
           </a>
