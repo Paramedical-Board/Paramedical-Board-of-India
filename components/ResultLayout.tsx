@@ -396,7 +396,13 @@ export default function ResultLayout({
       <div className="flex items-end justify-end px-2 pt-4 pb-1 mt-2 relative z-10">
         {/* Secretary / सचिव */}
         <div className="text-center min-w-[190px]">
-          <div className="h-[34px]"></div>
+          <div className="h-[42px] flex items-end justify-center pb-0.5">
+            <img
+              src="/Signature.png"
+              alt="Secretary Signature"
+              className="h-[38px] max-w-[140px] object-contain"
+            />
+          </div>
           <div className="border-t border-slate-400 pt-1">
             <span className="text-[10.5px] font-bold text-[#0b2545] block">
               Secretary / सचिव

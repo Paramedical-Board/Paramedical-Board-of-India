@@ -141,43 +141,23 @@ export default function Footer() {
             </h4>
 
             {/* Profile 1 Micro-card */}
-            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5 transition-all duration-200 shadow-xs group cursor-default">
-              <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 border border-[#E5C158]/60 bg-gray-200 shadow-xs">
-                <Image
-                  src="/Meditech6.jpeg"
-                  alt="Academic Council Member"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform"
-                />
-              </div>
-              <div className="leading-tight overflow-hidden min-w-0">
-                <h5 className="text-[11.5px] font-bold text-white truncate group-hover:text-[#F1E4C3] transition-colors">
-                  Dr. A. K. Sharma
-                </h5>
-                <p className="text-[10px] text-[#B8CCE4] truncate mt-0.5">
-                  Academic Council Member
-                </p>
-              </div>
+            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 rounded-xl px-3 py-2.5 flex flex-col justify-center transition-all duration-200 shadow-xs group cursor-default">
+              <h5 className="text-[12px] font-bold text-white group-hover:text-[#F1E4C3] transition-colors">
+                Dr. S. K. PATEL
+              </h5>
+              <p className="text-[10.5px] text-[#B8CCE4] mt-0.5">
+                Director / डायरेक्टर
+              </p>
             </div>
 
             {/* Profile 2 Micro-card */}
-            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 rounded-xl p-2.5 flex items-center gap-2.5 transition-all duration-200 shadow-xs group cursor-default">
-              <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 border border-[#E5C158]/60 bg-gray-200 shadow-xs">
-                <Image
-                  src="/Meditech3.jpeg"
-                  alt="Advisory Board Member"
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform"
-                />
-              </div>
-              <div className="leading-tight overflow-hidden min-w-0">
-                <h5 className="text-[11.5px] font-bold text-white truncate group-hover:text-[#F1E4C3] transition-colors">
-                  Dr. S. K. Verma
-                </h5>
-                <p className="text-[10px] text-[#B8CCE4] truncate mt-0.5">
-                  Institutional Advisory Member
-                </p>
-              </div>
+            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 rounded-xl px-3 py-2.5 flex flex-col justify-center transition-all duration-200 shadow-xs group cursor-default">
+              <h5 className="text-[12px] font-bold text-white group-hover:text-[#F1E4C3] transition-colors">
+                Mr. Oruvan Reddy
+              </h5>
+              <p className="text-[10.5px] text-[#B8CCE4] mt-0.5">
+                Secretary / सचिव
+              </p>
             </div>
           </div>
 

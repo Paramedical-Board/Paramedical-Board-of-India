@@ -52,6 +52,13 @@ export default function AdminCollegesPage() {
   const [savingCustomPassword, setSavingCustomPassword] = useState(false);
   const [modalPasswordError, setModalPasswordError] = useState<string | null>(null);
 
+  // Modal State for Editing College Name / Code
+  const [selectedCollegeForEdit, setSelectedCollegeForEdit] = useState<CollegeItem | null>(null);
+  const [editCollegeName, setEditCollegeName] = useState("");
+  const [editCollegeCode, setEditCollegeCode] = useState("");
+  const [savingCollegeEdit, setSavingCollegeEdit] = useState(false);
+  const [modalEditError, setModalEditError] = useState<string | null>(null);
+
   // Fetch all colleges
   const fetchColleges = useCallback(async () => {
     try {
@@ -146,6 +153,72 @@ export default function AdminCollegesPage() {
     setCustomNewPassword("");
     setModalPasswordError(null);
     setSavingCustomPassword(false);
+  };
+
+  // Open Edit College Modal
+  const handleOpenEditModal = (college: CollegeItem) => {
+    setSelectedCollegeForEdit(college);
+    setEditCollegeName(college.college_name);
+    setEditCollegeCode(college.college_code || "");
+    setModalEditError(null);
+    setTableActionError(null);
+  };
+
+  // Close Edit College Modal
+  const handleCloseEditModal = () => {
+    setSelectedCollegeForEdit(null);
+    setEditCollegeName("");
+    setEditCollegeCode("");
+    setModalEditError(null);
+    setSavingCollegeEdit(false);
+  };
+
+  // Submit Edit College (Name / Code)
+  const handleSaveCollegeEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCollegeForEdit) return;
+
+    const trimmedName = editCollegeName.trim();
+    if (!trimmedName) {
+      setModalEditError("College name cannot be empty.");
+      return;
+    }
+
+    try {
+      setSavingCollegeEdit(true);
+      setModalEditError(null);
+
+      const res = await fetch(`/api/admin/colleges/${selectedCollegeForEdit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          college_name: trimmedName,
+          college_code: editCollegeCode.trim() || undefined,
+        }),
+      });
+
+      if (res.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        setModalEditError(data.error || "Failed to update college.");
+        return;
+      }
+
+      setColleges((prev) =>
+        prev.map((c) => (c.id === selectedCollegeForEdit.id ? { ...c, ...data.college } : c))
+      );
+
+      handleCloseEditModal();
+    } catch (err) {
+      console.error("Save college edit error:", err);
+      setModalEditError("Network error while updating college.");
+    } finally {
+      setSavingCollegeEdit(false);
+    }
   };
 
   // Submit Password Change from Modal
@@ -771,6 +844,18 @@ export default function AdminCollegesPage() {
                         )}
                       </button>
 
+                      {/* Edit College Name/Code */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(college)}
+                        className="py-2 px-3 bg-slate-100 hover:bg-[#143E66] active:bg-[#0f2e4d] hover:text-white text-[#143E66] border border-slate-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>Edit</span>
+                      </button>
+
                       {/* Reset Password */}
                       <button
                         type="button"
@@ -859,7 +944,20 @@ export default function AdminCollegesPage() {
                               )}
                             </button>
 
-                            {/* 2. Reset / Regenerate Password Button */}
+                            {/* 2. Edit College Name/Code Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(college)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-[#143E66] hover:text-white text-[#143E66] border border-slate-300 rounded text-xs font-bold transition cursor-pointer"
+                              title="Edit college name or code"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              Edit
+                            </button>
+
+                            {/* 3. Reset / Regenerate Password Button */}
                             <button
                               type="button"
                               onClick={() => handleOpenPasswordModal(college)}
@@ -1007,6 +1105,128 @@ export default function AdminCollegesPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                       </svg>
                       Set New Password
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit College Name/Code Modal */}
+      {selectedCollegeForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-[#00031D] text-white px-5 sm:px-6 py-4 flex items-center justify-between border-b-2 border-[#D4AF37]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-full bg-[#143E66] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                    Edit College / कॉलेज संपादित करें
+                  </h3>
+                  <p className="text-[11px] text-slate-300 truncate">
+                    Update the college name or code.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseEditModal}
+                disabled={savingCollegeEdit}
+                className="text-slate-400 hover:text-white text-lg font-bold transition p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handleSaveCollegeEdit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
+              {/* College Info Summary */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-500 uppercase tracking-wide w-20">Username:</span>
+                  <span className="font-mono font-semibold text-slate-700">{selectedCollegeForEdit.username}</span>
+                </div>
+              </div>
+
+              {/* College Name Input */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  College Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editCollegeName}
+                  onChange={(e) => {
+                    setEditCollegeName(e.target.value);
+                    if (modalEditError) setModalEditError(null);
+                  }}
+                  placeholder="Enter college name"
+                  required
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition"
+                  autoFocus
+                />
+              </div>
+
+              {/* College Code Input */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  College Code
+                </label>
+                <input
+                  type="text"
+                  value={editCollegeCode}
+                  onChange={(e) => {
+                    setEditCollegeCode(e.target.value);
+                    if (modalEditError) setModalEditError(null);
+                  }}
+                  placeholder="Enter college code (optional)"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition"
+                />
+              </div>
+
+              {/* Modal Error State */}
+              {modalEditError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700 flex items-center gap-2">
+                  <svg className="w-4 h-4 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{modalEditError}</span>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  disabled={savingCollegeEdit}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingCollegeEdit || !editCollegeName.trim()}
+                  className="inline-flex items-center gap-2 px-5 py-2 bg-[#143E66] hover:bg-[#0f2e4d] disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold shadow-sm transition cursor-pointer"
+                >
+                  {savingCollegeEdit ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save Changes
                     </>
                   )}
                 </button>

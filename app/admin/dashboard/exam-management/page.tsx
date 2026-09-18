@@ -174,6 +174,7 @@ export default function ExamManagementHubPage() {
   const [addingSubject, setAddingSubject] = useState(false);
   const [addSubjectSuccess, setAddSubjectSuccess] = useState<string | null>(null);
   const [editingSubject, setEditingSubject] = useState<SubjectItem | null>(null);
+  const [deletingSubjectId, setDeletingSubjectId] = useState<string | null>(null);
   const [editSubjName, setEditSubjName] = useState("");
   const [editSubjCode, setEditSubjCode] = useState("");
   const [editTheoryMax, setEditTheoryMax] = useState("");
@@ -594,6 +595,34 @@ export default function ExamManagementHubPage() {
       alert("Network error updating subject.");
     } finally {
       setSavingEditSubject(false);
+    }
+  };
+
+  const handleDeleteSubject = async (subject: SubjectItem) => {
+    const confirmed = window.confirm(
+      `Delete subject "${subject.subject_name}" (${subject.subject_code})? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeletingSubjectId(subject.id);
+    try {
+      const res = await fetch(`/api/admin/subjects/${subject.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to delete subject");
+        return;
+      }
+      fetchSubjects(selectedCourse);
+      if (activeSession?.id) {
+        fetchDatesheet(selectedCourse, activeSession.id);
+      }
+    } catch (err) {
+      console.error("Delete subject error:", err);
+      alert("Network error deleting subject.");
+    } finally {
+      setDeletingSubjectId(null);
     }
   };
 
@@ -1136,19 +1165,28 @@ export default function ExamManagementHubPage() {
                             )}
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <button
-                              onClick={() => {
-                                setEditingSubject(s);
-                                setEditSubjName(s.subject_name);
-                                setEditSubjCode(s.subject_code);
-                                setEditTheoryMax(s.theory_max !== null && s.theory_max !== undefined ? String(s.theory_max) : "");
-                                setEditPracticalMax(s.practical_max !== null && s.practical_max !== undefined ? String(s.practical_max) : "");
-                                setEditCaMax(s.ca_max !== null && s.ca_max !== undefined ? String(s.ca_max) : "");
-                              }}
-                              className="px-2.5 py-1 bg-slate-100 hover:bg-[#143E66] hover:text-white text-[#143E66] font-bold rounded border border-slate-300 transition-colors cursor-pointer"
-                            >
-                              Edit
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingSubject(s);
+                                  setEditSubjName(s.subject_name);
+                                  setEditSubjCode(s.subject_code);
+                                  setEditTheoryMax(s.theory_max !== null && s.theory_max !== undefined ? String(s.theory_max) : "");
+                                  setEditPracticalMax(s.practical_max !== null && s.practical_max !== undefined ? String(s.practical_max) : "");
+                                  setEditCaMax(s.ca_max !== null && s.ca_max !== undefined ? String(s.ca_max) : "");
+                                }}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-[#143E66] hover:text-white text-[#143E66] font-bold rounded border border-slate-300 transition-colors cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSubject(s)}
+                                disabled={deletingSubjectId === s.id}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-red-600 hover:text-white text-red-600 font-bold rounded border border-slate-300 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {deletingSubjectId === s.id ? "..." : "Delete"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1192,7 +1230,7 @@ export default function ExamManagementHubPage() {
                   value={newSubjName}
                   onChange={(e) => setNewSubjName(e.target.value)}
                   placeholder="e.g. HUMAN ANATOMY & PHYSIOLOGY"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden uppercase"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
                 />
               </div>
 
@@ -1299,7 +1337,7 @@ export default function ExamManagementHubPage() {
                       required
                       value={editSubjName}
                       onChange={(e) => setEditSubjName(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66] uppercase"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#143E66]"
                     />
                   </div>
 

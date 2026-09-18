@@ -17,15 +17,30 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  if (typeof body.is_active !== "boolean") {
-    return NextResponse.json({ error: "is_active (boolean) is required" }, { status: 400 });
+  const updates: Record<string, string | boolean> = {};
+
+  if (typeof body.is_active === "boolean") {
+    updates.is_active = body.is_active;
+  }
+  if (typeof body.college_name === "string" && body.college_name.trim()) {
+    updates.college_name = body.college_name.trim();
+  }
+  if (typeof body.college_code === "string" && body.college_code.trim()) {
+    updates.college_code = body.college_code.trim();
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { error: "Provide at least one field to update (is_active, college_name, or college_code)" },
+      { status: 400 }
+    );
   }
 
   const { data, error } = await supabaseAdmin
     .from("colleges")
-    .update({ is_active: body.is_active })
+    .update(updates)
     .eq("id", id)
-    .select("id, college_name, username, is_active, created_at")
+    .select("id, college_name, username, college_code, is_active, created_at")
     .single();
 
   if (error) {
