@@ -221,7 +221,7 @@ export default function AdminApplicationsDashboardPage() {
             id="status-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-48 px-3 py-2 bg-slate-50 border border-slate-300 rounded text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#143E66]"
+            className="w-full sm:w-48 px-3 py-2 bg-slate-50 border border-slate-300 rounded text-base sm:text-sm font-medium text-slate-800 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#143E66]"
           >
             <option value="all">All Statuses (सभी)</option>
             <option value="submitted">Submitted (प्रस्तुत)</option>
@@ -233,7 +233,7 @@ export default function AdminApplicationsDashboardPage() {
         </div>
       </div>
 
-      {/* Applications Table Card */}
+      {/* Applications Table & Mobile Card View */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-slate-500">
@@ -263,13 +263,13 @@ export default function AdminApplicationsDashboardPage() {
             <p className="font-semibold text-sm">{error}</p>
             <button
               onClick={fetchApplications}
-              className="mt-3 px-4 py-1.5 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700"
+              className="mt-3 px-4 py-1.5 bg-red-600 text-white text-xs font-bold rounded hover:bg-red-700 cursor-pointer"
             >
               Retry
             </button>
           </div>
         ) : filteredApplications.length === 0 ? (
-          <div className="p-12 text-center text-slate-500">
+          <div className="p-10 sm:p-12 text-center text-slate-500">
             <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -279,63 +279,122 @@ export default function AdminApplicationsDashboardPage() {
             <p className="text-xs text-slate-500 mt-1">No student registrations match your current filters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#143E66] text-white text-xs uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-3.5 px-4 font-bold">Enrollment No</th>
-                  <th className="py-3.5 px-4 font-bold">Candidate Name</th>
-                  <th className="py-3.5 px-4 font-bold">College / Institution</th>
-                  <th className="py-3.5 px-4 font-bold">Course</th>
-                  <th className="py-3.5 px-4 font-bold">Date</th>
-                  <th className="py-3.5 px-4 font-bold">Status</th>
-                  <th className="py-3.5 px-4 font-bold text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 text-xs sm:text-sm text-slate-700">
-                {filteredApplications.map((app) => (
-                  <tr
-                    key={app.id}
-                    className="hover:bg-amber-50/40 transition-colors"
-                  >
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#143E66] whitespace-nowrap">
-                      {app.enrollment_no || app.registration_no}
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
-                      {app.candidate_name}
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-600 max-w-[220px] truncate" title={app.colleges?.college_name || "Unknown College"}>
-                      {app.colleges?.college_name || "—"}
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-600 max-w-[180px] truncate" title={app.course}>
-                      {app.course}
-                    </td>
-                    <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">
-                      {app.created_at ? new Date(app.created_at).toLocaleDateString("en-IN", {
+          <>
+            {/* 1. Mobile Card View (< md) */}
+            <div className="md:hidden divide-y divide-slate-200">
+              {filteredApplications.map((app) => (
+                <div key={app.id} className="p-4 hover:bg-slate-50 transition-colors space-y-3">
+                  {/* Card Header: Candidate Name & Status Badge */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-slate-900 text-sm truncate">
+                        {app.candidate_name}
+                      </h3>
+                      <span className="font-mono text-xs font-bold text-[#143E66] block mt-0.5">
+                        {app.enrollment_no || app.registration_no}
+                      </span>
+                    </div>
+                    <div className="shrink-0">
+                      <StatusBadge status={app.status} size="sm" />
+                    </div>
+                  </div>
+
+                  {/* Card Body: College & Course Details */}
+                  <div className="space-y-1 text-xs text-slate-600 bg-slate-50/80 p-2.5 rounded-lg border border-slate-100">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      <span className="truncate">{app.colleges?.college_name || "Unknown College"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                      <span className="truncate font-medium text-slate-700">{app.course}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 pt-1">
+                      Applied: {app.created_at ? new Date(app.created_at).toLocaleDateString("en-IN", {
                         day: "2-digit",
                         month: "short",
-                        year: "numeric"
+                        year: "numeric",
                       }) : "—"}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <StatusBadge status={app.status} size="sm" />
-                    </td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <Link
-                        href={`/admin/dashboard/applications/${app.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold rounded shadow-2xs hover:shadow-xs transition-all"
-                      >
-                        <span>Review</span>
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </td>
+                    </div>
+                  </div>
+
+                  {/* Card Action Button */}
+                  <Link
+                    href={`/admin/dashboard/applications/${app.id}`}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 bg-[#143E66] hover:bg-[#0a233a] active:bg-[#061828] text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
+                  >
+                    <span>Review Application / आवेदन देखें</span>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
+              ))}
+            </div>
+
+            {/* 2. Desktop & Tablet Table View (hidden on mobile, visible on md+) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#143E66] text-white text-xs uppercase tracking-wider border-b border-slate-200">
+                    <th className="py-3.5 px-4 font-bold">Enrollment No</th>
+                    <th className="py-3.5 px-4 font-bold">Candidate Name</th>
+                    <th className="py-3.5 px-4 font-bold">College / Institution</th>
+                    <th className="py-3.5 px-4 font-bold">Course</th>
+                    <th className="py-3.5 px-4 font-bold">Date</th>
+                    <th className="py-3.5 px-4 font-bold">Status</th>
+                    <th className="py-3.5 px-4 font-bold text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-xs sm:text-sm text-slate-700">
+                  {filteredApplications.map((app) => (
+                    <tr
+                      key={app.id}
+                      className="hover:bg-amber-50/40 transition-colors"
+                    >
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#143E66] whitespace-nowrap">
+                        {app.enrollment_no || app.registration_no}
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                        {app.candidate_name}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-600 max-w-[220px] truncate" title={app.colleges?.college_name || "Unknown College"}>
+                        {app.colleges?.college_name || "—"}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-600 max-w-[180px] truncate" title={app.course}>
+                        {app.course}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">
+                        {app.created_at ? new Date(app.created_at).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric"
+                        }) : "—"}
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <StatusBadge status={app.status} size="sm" />
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <Link
+                          href={`/admin/dashboard/applications/${app.id}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold rounded shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                        >
+                          <span>Review</span>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

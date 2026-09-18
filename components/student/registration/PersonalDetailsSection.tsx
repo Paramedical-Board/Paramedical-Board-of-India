@@ -120,7 +120,7 @@ export default function PersonalDetailsSection({ register, errors }: Props) {
           </label>
           <select
             defaultValue=""
-            className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 text-base sm:text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
               errors.category
                 ? "border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
                 : "border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"
@@ -150,7 +150,7 @@ export default function PersonalDetailsSection({ register, errors }: Props) {
           </label>
           <select
             defaultValue=""
-            className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 text-base sm:text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
               errors.gender
                 ? "border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
                 : "border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"

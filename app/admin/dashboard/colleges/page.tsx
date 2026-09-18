@@ -708,116 +708,198 @@ export default function AdminCollegesPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs sm:text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold text-[11px] tracking-wider">
-                  <th className="py-3 px-4 w-20">Code</th>
-                  <th className="py-3 px-4 sm:px-6">College Name</th>
-                  <th className="py-3 px-4">Username</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Registered On</th>
-                  <th className="py-3 px-4 sm:px-6 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {colleges.map((college) => {
-                  const isToggling = togglingId === college.id;
+          <>
+            {/* 1. Mobile Card View (< md) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {colleges.map((college) => {
+                const isToggling = togglingId === college.id;
 
-                  return (
-                    <tr key={college.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-[#143E66]">
-                        <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs">
-                          {college.college_code || "—"}
+                return (
+                  <div key={college.id} className="p-4 hover:bg-slate-50/80 transition-colors space-y-3">
+                    {/* Top Row: College Code & Status */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs font-mono font-bold text-[#143E66]">
+                        Code: {college.college_code || "—"}
+                      </span>
+                      {college.is_active ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          Active
                         </span>
-                      </td>
-                      <td className="py-3.5 px-4 sm:px-6 font-semibold text-slate-900">
-                        {college.college_name}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-700">
-                        {college.username}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {college.is_active ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                            Inactive
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-500 text-xs">
-                        {formatDate(college.created_at)}
-                      </td>
-                      <td className="py-3.5 px-4 sm:px-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* 1. Activate / Deactivate Button */}
-                          <button
-                            type="button"
-                            disabled={isToggling}
-                            onClick={() => handleToggleStatus(college)}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                              college.is_active
-                                ? "bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 border border-slate-200 hover:border-red-200"
-                                : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
-                            }`}
-                          >
-                            {isToggling ? (
-                              <span className="inline-flex items-center gap-1">
-                                <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                                Updating...
-                              </span>
-                            ) : college.is_active ? (
-                              "Deactivate"
-                            ) : (
-                              "Activate"
-                            )}
-                          </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                          Inactive
+                        </span>
+                      )}
+                    </div>
 
-                          {/* 2. Reset / Regenerate Password Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenPasswordModal(college)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 rounded text-xs font-bold transition cursor-pointer"
-                            title="Change or regenerate password for this college"
-                          >
-                            <svg className="w-3 h-3 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                            </svg>
-                            Reset Password
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    {/* College Name */}
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm">
+                        {college.college_name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 font-mono">
+                        <span>User: <strong className="text-slate-800">{college.username}</strong></span>
+                        <span>•</span>
+                        <span>{formatDate(college.created_at)}</span>
+                      </div>
+                    </div>
+
+                    {/* Mobile Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {/* Activate / Deactivate */}
+                      <button
+                        type="button"
+                        disabled={isToggling}
+                        onClick={() => handleToggleStatus(college)}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 ${
+                          college.is_active
+                            ? "bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 border border-slate-200 hover:border-red-200"
+                            : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        }`}
+                      >
+                        {isToggling ? (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                            Updating...
+                          </span>
+                        ) : college.is_active ? (
+                          "Deactivate"
+                        ) : (
+                          "Activate"
+                        )}
+                      </button>
+
+                      {/* Reset Password */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPasswordModal(college)}
+                        className="py-2 px-3 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-900 border border-amber-300/80 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                      >
+                        <svg className="w-3.5 h-3.5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        <span>Reset Password</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 2. Desktop & Tablet Table View (hidden on mobile, visible on md+) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold text-[11px] tracking-wider">
+                    <th className="py-3 px-4 w-20">Code</th>
+                    <th className="py-3 px-4 sm:px-6">College Name</th>
+                    <th className="py-3 px-4">Username</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Registered On</th>
+                    <th className="py-3 px-4 sm:px-6 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {colleges.map((college) => {
+                    const isToggling = togglingId === college.id;
+
+                    return (
+                      <tr key={college.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-[#143E66]">
+                          <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs">
+                            {college.college_code || "—"}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 sm:px-6 font-semibold text-slate-900">
+                          {college.college_name}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-slate-700">
+                          {college.username}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {college.is_active ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                              Inactive
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-500 text-xs">
+                          {formatDate(college.created_at)}
+                        </td>
+                        <td className="py-3.5 px-4 sm:px-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* 1. Activate / Deactivate Button */}
+                            <button
+                              type="button"
+                              disabled={isToggling}
+                              onClick={() => handleToggleStatus(college)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                                college.is_active
+                                  ? "bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 border border-slate-200 hover:border-red-200"
+                                  : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              }`}
+                            >
+                              {isToggling ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                                  Updating...
+                                </span>
+                              ) : college.is_active ? (
+                                "Deactivate"
+                              ) : (
+                                "Activate"
+                              )}
+                            </button>
+
+                            {/* 2. Reset / Regenerate Password Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPasswordModal(college)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 rounded text-xs font-bold transition cursor-pointer"
+                              title="Change or regenerate password for this college"
+                            >
+                              <svg className="w-3.5 h-3.5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                              </svg>
+                              Reset Password
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
       {/* Modal Dialog: Reset / Set College Password */}
       {selectedCollegeForPassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-[#00031D] text-white px-6 py-4 flex items-center justify-between border-b-2 border-[#D4AF37]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-[#143E66] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37]">
+            <div className="bg-[#00031D] text-white px-5 sm:px-6 py-4 flex items-center justify-between border-b-2 border-[#D4AF37]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-full bg-[#143E66] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shrink-0">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
                 </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-white">
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-white truncate">
                     Reset College Password / पासवर्ड बदलें
                   </h3>
-                  <p className="text-[11px] text-slate-300">
+                  <p className="text-[11px] text-slate-300 truncate">
                     Set a custom password or auto-generate a new one.
                   </p>
                 </div>
@@ -826,14 +908,14 @@ export default function AdminCollegesPage() {
                 type="button"
                 onClick={handleClosePasswordModal}
                 disabled={savingCustomPassword}
-                className="text-slate-400 hover:text-white text-lg font-bold transition p-1"
+                className="text-slate-400 hover:text-white text-lg font-bold transition p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {/* Modal Body / Form */}
-            <form onSubmit={handleSaveModalPassword} className="p-6 space-y-5">
+            <form onSubmit={handleSaveModalPassword} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
               {/* College Info Summary */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1 text-xs">
                 <div className="flex items-center gap-2">

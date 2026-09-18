@@ -53,10 +53,12 @@ export default function CourseSelectorDropdown({
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleKeyDown);
-      // Auto focus search input when opened
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 50);
+      // Auto focus search input only on desktop (screen width >= 640px) to prevent mobile virtual keyboard popup
+      if (typeof window !== "undefined" && window.innerWidth >= 640) {
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 50);
+      }
     }
 
     return () => {
@@ -123,7 +125,7 @@ export default function CourseSelectorDropdown({
               </span>
             </>
           ) : (
-            <span className="text-xs sm:text-sm text-slate-400 font-normal">
+            <span className="text-xs sm:text-sm text-slate-400 font-normal truncate">
               {placeholder}
             </span>
           )}
@@ -152,7 +154,7 @@ export default function CourseSelectorDropdown({
 
       {/* Floating Dropdown Panel */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-2xl p-2 sm:p-3 animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute top-full left-0 right-0 mt-1.5 z-[999] bg-white border border-slate-200 rounded-xl shadow-2xl p-2.5 sm:p-3 animate-in fade-in slide-in-from-top-1 duration-150 max-w-full">
           {/* Search Box */}
           <div className="relative mb-2">
             <svg
@@ -173,14 +175,14 @@ export default function CourseSelectorDropdown({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by course name, code (e.g. DMLT, 521, COTT)..."
+              placeholder="Search courses (e.g. DMLT, COTT, 521)..."
               className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66]/20 focus:border-[#143E66]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 bg-slate-200 hover:bg-slate-300 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 bg-slate-200 hover:bg-slate-300 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer"
               >
                 ✕
               </button>
@@ -188,11 +190,11 @@ export default function CourseSelectorDropdown({
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-slate-100 overflow-x-auto text-xs">
+          <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-slate-100 overflow-x-auto text-xs no-scrollbar select-none">
             <button
               type="button"
               onClick={() => setActiveTab("all")}
-              className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === "all"
                   ? "bg-[#143E66] text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -203,7 +205,7 @@ export default function CourseSelectorDropdown({
             <button
               type="button"
               onClick={() => setActiveTab("diploma")}
-              className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === "diploma"
                   ? "bg-[#143E66] text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -214,7 +216,7 @@ export default function CourseSelectorDropdown({
             <button
               type="button"
               onClick={() => setActiveTab("certificate")}
-              className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === "certificate"
                   ? "bg-[#143E66] text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -225,7 +227,7 @@ export default function CourseSelectorDropdown({
           </div>
 
           {/* Scrollable Course Options */}
-          <div className="max-h-60 sm:max-h-72 overflow-y-auto space-y-3 pr-1 text-xs sm:text-sm">
+          <div className="max-h-56 sm:max-h-72 overflow-y-auto space-y-2 pr-1 text-xs sm:text-sm overscroll-contain">
             {totalFilteredCount === 0 ? (
               <div className="py-6 text-center text-slate-500">
                 <p className="text-xs">No courses match &quot;{searchQuery}&quot;</p>
@@ -251,7 +253,7 @@ export default function CourseSelectorDropdown({
                         {filteredDiplomaCourses.length}
                       </span>
                     </div>
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       {filteredDiplomaCourses.map((course) => {
                         const isSelected = value === course;
                         const is2Yr = isTwoYearCourse(course);
@@ -260,19 +262,19 @@ export default function CourseSelectorDropdown({
                             key={course}
                             type="button"
                             onClick={() => handleSelect(course)}
-                            className={`w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                            className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-lg flex items-start sm:items-center justify-between gap-2.5 transition-colors cursor-pointer active:bg-slate-200 ${
                               isSelected
                                 ? "bg-blue-50 text-[#143E66] font-bold ring-1 ring-[#143E66]/20"
                                 : "text-slate-800 hover:bg-slate-100 font-medium"
                             }`}
                           >
-                            <span className="flex-1 truncate">{course}</span>
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="flex-1 text-xs sm:text-sm leading-snug break-words">{course}</span>
+                            <div className="flex items-center gap-1.5 shrink-0 mt-0.5 sm:mt-0">
                               <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                                className={`text-[9.5px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap ${
                                   is2Yr
-                                    ? "bg-amber-100/70 text-amber-800"
-                                    : "bg-slate-100 text-slate-600"
+                                    ? "bg-amber-100/70 text-amber-800 border border-amber-200/60"
+                                    : "bg-slate-100 text-slate-600 border border-slate-200/60"
                                 }`}
                               >
                                 {is2Yr ? "2 Yrs" : "1 Yr"}
@@ -309,7 +311,7 @@ export default function CourseSelectorDropdown({
                         {filteredCertificateCourses.length}
                       </span>
                     </div>
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       {filteredCertificateCourses.map((course) => {
                         const isSelected = value === course;
                         const is2Yr = isTwoYearCourse(course);
@@ -318,19 +320,19 @@ export default function CourseSelectorDropdown({
                             key={course}
                             type="button"
                             onClick={() => handleSelect(course)}
-                            className={`w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                            className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-lg flex items-start sm:items-center justify-between gap-2.5 transition-colors cursor-pointer active:bg-slate-200 ${
                               isSelected
                                 ? "bg-blue-50 text-[#143E66] font-bold ring-1 ring-[#143E66]/20"
                                 : "text-slate-800 hover:bg-slate-100 font-medium"
                             }`}
                           >
-                            <span className="flex-1 truncate">{course}</span>
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="flex-1 text-xs sm:text-sm leading-snug break-words">{course}</span>
+                            <div className="flex items-center gap-1.5 shrink-0 mt-0.5 sm:mt-0">
                               <span
-                                className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                                className={`text-[9.5px] sm:text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap ${
                                   is2Yr
-                                    ? "bg-amber-100/70 text-amber-800"
-                                    : "bg-slate-100 text-slate-600"
+                                    ? "bg-amber-100/70 text-amber-800 border border-amber-200/60"
+                                    : "bg-slate-100 text-slate-600 border border-slate-200/60"
                                 }`}
                               >
                                 {is2Yr ? "2 Yrs" : "1 Yr"}

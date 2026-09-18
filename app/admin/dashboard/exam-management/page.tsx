@@ -881,7 +881,7 @@ export default function ExamManagementHubPage() {
         {/* Course & Session Selector Dual Panel */}
         <div className="mt-5 bg-slate-50 p-5 rounded-lg border border-slate-200 grid grid-cols-1 lg:grid-cols-12 gap-5 items-end">
           {/* 1. Course Selector */}
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-6 relative z-20">
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Select Course / पाठ्यक्रम चुनें:
@@ -910,7 +910,7 @@ export default function ExamManagementHubPage() {
             <select
               value={selectedSessionKey || sessionOptions[0]?.key}
               onChange={(e) => handleSessionChange(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-[#143E66] focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
+              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-base sm:text-sm font-bold text-[#143E66] focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
             >
               {sessionOptions.map((opt) => (
                 <option key={opt.key} value={opt.key}>
@@ -963,10 +963,10 @@ export default function ExamManagementHubPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 mb-6 overflow-x-auto">
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 mb-6 overflow-x-auto pb-1 scrollbar-none touch-pan-x">
         <button
           onClick={() => setActiveTab("subjects")}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
             activeTab === "subjects"
               ? "border-[#143E66] text-[#143E66] bg-white rounded-t-md"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -977,7 +977,7 @@ export default function ExamManagementHubPage() {
 
         <button
           onClick={() => setActiveTab("datesheet")}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
             activeTab === "datesheet"
               ? "border-[#143E66] text-[#143E66] bg-white rounded-t-md"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -993,7 +993,7 @@ export default function ExamManagementHubPage() {
 
         <button
           onClick={() => setActiveTab("roll_admit")}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
             activeTab === "roll_admit"
               ? "border-[#143E66] text-[#143E66] bg-white rounded-t-md"
               : "border-transparent text-slate-500 hover:text-slate-800"
@@ -1014,7 +1014,7 @@ export default function ExamManagementHubPage() {
               activeSession?.id
             );
           }}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+          className={`px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
             activeTab === "results"
               ? "border-[#143E66] text-[#143E66] bg-white rounded-t-md"
               : "border-transparent text-slate-500 hover:text-slate-800"

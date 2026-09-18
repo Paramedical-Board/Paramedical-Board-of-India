@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getMaintenanceMode } from "@/lib/system-settings";
 
 export async function POST(req: NextRequest) {
   try {
+    const maintenance = await getMaintenanceMode();
+    if (maintenance.enabled) {
+      return NextResponse.json(
+        { error: "Portal is currently under scheduled maintenance. Please try again later." },
+        { status: 503 }
+      );
+    }
+
     const body = await req.json();
 
     const category = (body.category || "general").trim();

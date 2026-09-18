@@ -303,40 +303,40 @@ export default function AdminApplicationDetailPage({
         </div>
 
         {/* Action Buttons: Back / Edit / Approve / Reject */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
           <Link
             href="/admin/dashboard"
-            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded border border-slate-300 transition-colors"
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded border border-slate-300 transition-colors"
           >
-            Back
+            ← Back
           </Link>
 
           <Link
             href={`/admin/dashboard/applications/${id}/edit`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold uppercase tracking-wider rounded shadow-sm transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold uppercase tracking-wider rounded shadow-sm transition-all cursor-pointer"
             title="Edit all application fields and documents / सभी विवरण एवं दस्तावेज़ संपादित करें"
           >
             <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            <span>Edit Application / आवेदन संपादित करें</span>
+            <span>Edit Application</span>
           </Link>
 
           <button
             onClick={handleApprove}
             disabled={actionLoading || isTerminal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
-            <span>Approve Application</span>
+            <span>Approve</span>
           </button>
 
           <button
             onClick={handleReject}
             disabled={actionLoading || isTerminal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold uppercase tracking-wider rounded shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

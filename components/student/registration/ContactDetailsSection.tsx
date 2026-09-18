@@ -98,7 +98,7 @@ export default function ContactDetailsSection({ register, errors, isEmailLocked 
           </label>
           <select
             defaultValue={SESSIONS[0]}
-            className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 text-base sm:text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
               errors.academic_session
                 ? "border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
                 : "border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"
@@ -126,7 +126,7 @@ export default function ContactDetailsSection({ register, errors, isEmailLocked 
           <textarea
             rows={2}
             placeholder="House / Flat No., Street, Landmark, Area"
-            className={`w-full px-3.5 py-2 text-sm bg-white border rounded-md transition-colors placeholder:text-slate-400 text-slate-900 focus:outline-none focus:ring-2 resize-y ${
+            className={`w-full px-3.5 py-2 text-base sm:text-sm bg-white border rounded-md transition-colors placeholder:text-slate-400 text-slate-900 focus:outline-none focus:ring-2 resize-y ${
               errors.address
                 ? "border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
                 : "border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"
@@ -148,7 +148,7 @@ export default function ContactDetailsSection({ register, errors, isEmailLocked 
           <input
             type="text"
             placeholder="Enter District Name"
-            className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-md transition-colors placeholder:text-slate-400 text-slate-900 focus:outline-none focus:ring-2 ${
+            className={`w-full px-3.5 py-2.5 text-base sm:text-sm bg-white border rounded-md transition-colors placeholder:text-slate-400 text-slate-900 focus:outline-none focus:ring-2 ${
               errors.district
                 ? "border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
                 : "border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"
@@ -169,7 +169,7 @@ export default function ContactDetailsSection({ register, errors, isEmailLocked 
           </label>
           <select
             defaultValue=""
-            className={`w-full px-3.5 py-2.5 text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
+            className={`w-full px-3.5 py-2.5 text-base sm:text-sm bg-white border rounded-md transition-colors text-slate-900 focus:outline-none focus:ring-2 cursor-pointer ${
               errors.state
                 ? "border-[#B13B1C] focus:ring-[#B13B1C]/20 focus:border-[#B13B1C]"
                 : "border-slate-300 focus:ring-[#143E66]/20 focus:border-[#143E66]"
