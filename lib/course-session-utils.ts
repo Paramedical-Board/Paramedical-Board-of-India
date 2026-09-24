@@ -1,7 +1,13 @@
 /**
- * Helper utilities for course durations and academic session resolution
+ * Helper utilities for course durations and academic session resolution.
+ *
+ * isTwoYearCourse() now accepts an optional DB-sourced boolean so it no longer
+ * relies on fragile keyword-matching. Pass `dbIsTwoYear` whenever you have the
+ * courses row available (e.g. from /api/public/courses). The keyword fallback
+ * is kept only for legacy call-sites that have not yet been migrated.
  */
 
+// ── Legacy keyword-based lookup (kept for backward compat) ────────────────────
 export const TWO_YEAR_COURSES = [
   "Certificate in Medical Laboratory Technology (CMLT)",
   "Certificate in Operation Theatre Technology (COTT)",
@@ -20,7 +26,23 @@ export const TWO_YEAR_COURSES = [
   "Diploma in Operation Theater Technician- DOTT (PCC-533)",
 ];
 
-export function isTwoYearCourse(courseName: string): boolean {
+/**
+ * Returns true if the given course is a 2-year course.
+ *
+ * Preferred usage: pass `dbIsTwoYear` (the `is_two_year` boolean from the DB)
+ * and the function will return it directly without any string-matching.
+ *
+ * Fallback: when `dbIsTwoYear` is undefined (legacy call-sites), the old
+ * keyword-matching logic is used so nothing breaks.
+ */
+export function isTwoYearCourse(
+  courseName: string,
+  dbIsTwoYear?: boolean
+): boolean {
+  // ① Preferred path — DB value available, use it directly
+  if (typeof dbIsTwoYear === "boolean") return dbIsTwoYear;
+
+  // ② Legacy fallback — keyword matching
   if (!courseName) return false;
   const twoYearKeywords = [
     "cmlt",
@@ -39,13 +61,13 @@ export function isTwoYearCourse(courseName: string): boolean {
     "pcc-533",
   ];
   const lower = courseName.toLowerCase();
-  if (twoYearKeywords.some((kw) => lower.includes(kw))) {
-    return true;
-  }
-  return TWO_YEAR_COURSES.some((c) =>
-    lower.includes(c.toLowerCase()) || c.toLowerCase().includes(lower)
+  if (twoYearKeywords.some((kw) => lower.includes(kw))) return true;
+  return TWO_YEAR_COURSES.some(
+    (c) => lower.includes(c.toLowerCase()) || c.toLowerCase().includes(lower)
   );
 }
+
+// ── Session option types & helpers ────────────────────────────────────────────
 
 export interface CourseSessionOption {
   key: string;
@@ -56,9 +78,18 @@ export interface CourseSessionOption {
   year_number: number;
 }
 
-export function getCourseSessionOptions(courseName: string): CourseSessionOption[] {
-  const is2Year = isTwoYearCourse(courseName);
-  const baseSessions = ["2026-2027", "2025-2026", "2024-2025", "2023-2024", "2022-2023"];
+export function getCourseSessionOptions(
+  courseName: string,
+  dbIsTwoYear?: boolean
+): CourseSessionOption[] {
+  const is2Year = isTwoYearCourse(courseName, dbIsTwoYear);
+  const baseSessions = [
+    "2026-2027",
+    "2025-2026",
+    "2024-2025",
+    "2023-2024",
+    "2022-2023",
+  ];
   const options: CourseSessionOption[] = [];
 
   for (const session of baseSessions) {
@@ -76,7 +107,7 @@ export function getCourseSessionOptions(courseName: string): CourseSessionOption
         year_number: 1,
       });
 
-      // 2nd Year option (e.g. for batch 2023-2024, 2nd year is 2024-2025)
+      // 2nd Year option (e.g. batch 2023-2024 → 2nd year is 2024-2025)
       const secondYearStart = startYear + 1;
       const secondYearEnd = endYear + 1;
       const secondYearSession = `${secondYearStart}-${secondYearEnd}`;
@@ -89,7 +120,6 @@ export function getCourseSessionOptions(courseName: string): CourseSessionOption
         year_number: 2,
       });
     } else {
-      // 1 Year course option
       options.push({
         key: `${session}_1`,
         label: `Session ${session} (1 Year)`,
@@ -104,7 +134,9 @@ export function getCourseSessionOptions(courseName: string): CourseSessionOption
   return options;
 }
 
-export function getBatchAcademicSessionFromSessionLabel(sessionLabel?: string | null): string | null {
+export function getBatchAcademicSessionFromSessionLabel(
+  sessionLabel?: string | null
+): string | null {
   if (!sessionLabel) return null;
   const match = sessionLabel.match(/(\d{4})-(\d{4})/);
   if (!match) return null;

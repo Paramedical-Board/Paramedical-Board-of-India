@@ -111,7 +111,7 @@ export default function ExamManagementHubPage() {
       }
     }
 
-    if (courseParam && PARAMEDICAL_COURSES.includes(courseParam)) {
+    if (courseParam) {
       setSelectedCourse(courseParam);
     }
     if (

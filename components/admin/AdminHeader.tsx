@@ -69,6 +69,16 @@ export default function AdminHeader({ session }: AdminHeaderProps) {
       ),
       isActive: (path: string) => path.startsWith("/admin/dashboard/colleges"),
     },
+      {
+        label: "UI Modifications / यूआई परिवर्तन",
+        href: "/admin/dashboard/ui-modifications",
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 3v18M3 9h18M3 15h18" />
+          </svg>
+        ),
+        isActive: (path: string) => path.startsWith("/admin/dashboard/ui-modifications"),
+      },
     {
       label: "Inquiries / पूछताछ",
       href: "/admin/dashboard/inquiries",
