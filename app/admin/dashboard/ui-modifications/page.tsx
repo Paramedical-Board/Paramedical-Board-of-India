@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import type { Announcement } from "@/lib/announcement-types";
+import { splitDate } from "@/lib/announcement-format";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,6 +82,18 @@ const emptyCourseForm = () => ({
   career_scope: [] as string[],
   is_featured: false,
   display_order: 0,
+});
+
+const emptyAnnouncementForm = () => ({
+  title_en: "",
+  title_hi: "",
+  description_en: "",
+  description_hi: "",
+  announcement_date: new Date().toISOString().split("T")[0],
+  attachment_url: null as string | null,
+  attachment_file_id: null as string | null,
+  link_url: "",
+  is_published: true,
 });
 
 // ─── Inline SVGs ──────────────────────────────────────────────────────────────
@@ -623,9 +637,33 @@ export default function UIModificationsPage() {
   const [editCourseSubmitting, setEditCourseSubmitting] = useState(false);
   const [editCourseModalError, setEditCourseModalError] = useState<string | null>(null);
 
+  // ── Announcements State ──
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
+  const [announcementsError, setAnnouncementsError] = useState<string | null>(null);
+  const [announcementsActionError, setAnnouncementsActionError] = useState<string | null>(null);
+  const [togglingAnnouncementId, setTogglingAnnouncementId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // ── Announcement Modal & Form State ──
+  const [announcementModalOpen, setAnnouncementModalOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm());
+  const [announcementSubmitting, setAnnouncementSubmitting] = useState(false);
+  const [announcementFormError, setAnnouncementFormError] = useState<string | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
+
   // ── Course admin list filters ──
   const [courseFilterTab, setCourseFilterTab] = useState<"all" | "diploma" | "certificate">("all");
   const [courseSearch, setCourseSearch] = useState("");
+
+  // ── Collapsible Section State (default hidden for compact view and easy scrolling) ──
+  const [showInstitutions, setShowInstitutions] = useState(false);
+  const [showCourses, setShowCourses] = useState(false);
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
 
   const filteredAdminCourses = useMemo(() => {
     return courses.filter((c) => {
@@ -689,10 +727,35 @@ export default function UIModificationsPage() {
     }
   }, [router]);
 
+  // ── Fetch all announcements ──
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      setLoadingAnnouncements(true);
+      setAnnouncementsError(null);
+      const res = await fetch("/api/admin/announcements", { credentials: "include" });
+      if (res.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) {
+        setAnnouncementsError(data.error || "Failed to load announcements");
+        return;
+      }
+      setAnnouncements(data.announcements || []);
+    } catch (err) {
+      console.error("Error fetching announcements:", err);
+      setAnnouncementsError("Network error while loading announcements");
+    } finally {
+      setLoadingAnnouncements(false);
+    }
+  }, [router]);
+
   useEffect(() => {
     fetchInstitutions();
     fetchCourses();
-  }, [fetchInstitutions, fetchCourses]);
+    fetchAnnouncements();
+  }, [fetchInstitutions, fetchCourses, fetchAnnouncements]);
 
   // ── Add-new form helpers ──
   const patchAddForm = (patch: Partial<ReturnType<typeof emptyForm>>) =>
@@ -1089,6 +1152,264 @@ export default function UIModificationsPage() {
     }
   };
 
+  // ── Announcement Handlers ──
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((cur) => (cur === msg ? null : cur));
+    }, 4000);
+  };
+
+  const handleOpenAddAnnouncementModal = () => {
+    setEditingAnnouncement(null);
+    setAnnouncementForm(emptyAnnouncementForm());
+    setAnnouncementFormError(null);
+    setUploadError(null);
+    setUploadedFileName(null);
+    setAnnouncementModalOpen(true);
+  };
+
+  const handleOpenEditAnnouncementModal = (item: Announcement) => {
+    setEditingAnnouncement(item);
+    setAnnouncementForm({
+      title_en: item.title_en,
+      title_hi: item.title_hi || "",
+      description_en: item.description_en || "",
+      description_hi: item.description_hi || "",
+      announcement_date: item.announcement_date,
+      attachment_url: item.attachment_url,
+      attachment_file_id: item.attachment_file_id || null,
+      link_url: item.link_url || "",
+      is_published: item.is_published,
+    });
+    setAnnouncementFormError(null);
+    setUploadError(null);
+    setUploadedFileName(item.attachment_url ? "Current PDF attached" : null);
+    setAnnouncementModalOpen(true);
+  };
+
+  const handleCloseAnnouncementModal = () => {
+    setAnnouncementModalOpen(false);
+    setEditingAnnouncement(null);
+    setAnnouncementForm(emptyAnnouncementForm());
+    setAnnouncementFormError(null);
+    setUploadError(null);
+    setUploadedFileName(null);
+    setAnnouncementSubmitting(false);
+    setUploadingPdf(false);
+  };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setUploadError("Only PDF files are allowed (.pdf).");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      setUploadError("PDF file size must not exceed 1 MB.");
+      return;
+    }
+
+    setUploadingPdf(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/announcements/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (res.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        setUploadError(data.error || "Failed to upload PDF");
+        return;
+      }
+
+      setAnnouncementForm((prev) => ({
+        ...prev,
+        attachment_url: data.url,
+        attachment_file_id: data.fileId,
+      }));
+      setUploadedFileName(data.originalName || file.name);
+    } catch (err) {
+      console.error("PDF upload error:", err);
+      setUploadError("Network error while uploading PDF");
+    } finally {
+      setUploadingPdf(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+    }
+  };
+
+  const handleRemovePdf = () => {
+    setAnnouncementForm((prev) => ({
+      ...prev,
+      attachment_url: null,
+      attachment_file_id: null,
+    }));
+    setUploadedFileName(null);
+    setUploadError(null);
+    if (pdfInputRef.current) pdfInputRef.current.value = "";
+  };
+
+  const handleSaveAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAnnouncementFormError(null);
+
+    const titleEn = announcementForm.title_en.trim();
+    if (!titleEn) {
+      setAnnouncementFormError("Title (English) is required.");
+      return;
+    }
+    if (titleEn.length > 200) {
+      setAnnouncementFormError("Title (English) must be at most 200 characters.");
+      return;
+    }
+    if (announcementForm.title_hi && announcementForm.title_hi.length > 200) {
+      setAnnouncementFormError("Title (Hindi) must be at most 200 characters.");
+      return;
+    }
+    if (announcementForm.description_en && announcementForm.description_en.length > 1000) {
+      setAnnouncementFormError("Description (English) must be at most 1000 characters.");
+      return;
+    }
+    if (announcementForm.description_hi && announcementForm.description_hi.length > 1000) {
+      setAnnouncementFormError("Description (Hindi) must be at most 1000 characters.");
+      return;
+    }
+
+    const linkUrl = announcementForm.link_url.trim();
+    if (linkUrl && !linkUrl.startsWith("http://") && !linkUrl.startsWith("https://")) {
+      setAnnouncementFormError("External link must start with http:// or https://");
+      return;
+    }
+
+    setAnnouncementSubmitting(true);
+    try {
+      const payload = {
+        title_en: titleEn,
+        title_hi: announcementForm.title_hi.trim() || null,
+        description_en: announcementForm.description_en.trim() || null,
+        description_hi: announcementForm.description_hi.trim() || null,
+        announcement_date: announcementForm.announcement_date || new Date().toISOString().split("T")[0],
+        attachment_url: announcementForm.attachment_url,
+        attachment_file_id: announcementForm.attachment_file_id,
+        link_url: linkUrl || null,
+        is_published: announcementForm.is_published,
+      };
+
+      const url = editingAnnouncement
+        ? `/api/admin/announcements/${editingAnnouncement.id}`
+        : `/api/admin/announcements`;
+      const method = editingAnnouncement ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
+
+      if (res.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        setAnnouncementFormError(data.error || "Failed to save announcement");
+        return;
+      }
+
+      handleCloseAnnouncementModal();
+      showToast("Announcement saved");
+      fetchAnnouncements();
+    } catch (err) {
+      console.error("Save announcement error:", err);
+      setAnnouncementFormError("Network error while saving announcement");
+    } finally {
+      setAnnouncementSubmitting(false);
+    }
+  };
+
+  const handleToggleAnnouncementPublish = async (item: Announcement) => {
+    setAnnouncementsActionError(null);
+    const nextState = !item.is_published;
+    setTogglingAnnouncementId(item.id);
+
+    try {
+      const res = await fetch(`/api/admin/announcements/${item.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_published: nextState }),
+        credentials: "include",
+      });
+
+      if (res.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        setAnnouncementsActionError(data.error || "Failed to update status");
+        return;
+      }
+
+      setAnnouncements((prev) =>
+        prev.map((a) => (a.id === item.id ? { ...a, is_published: nextState } : a))
+      );
+      showToast(nextState ? "Announcement published" : "Announcement saved as draft");
+    } catch (err) {
+      console.error("Toggle publish error:", err);
+      setAnnouncementsActionError("Network error while updating publish status");
+    } finally {
+      setTogglingAnnouncementId(null);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (item: Announcement) => {
+    const confirmed = window.confirm(
+      "Delete this announcement? This cannot be undone. / क्या आप यह घोषणा हटाना चाहते हैं?"
+    );
+    if (!confirmed) return;
+
+    setAnnouncementsActionError(null);
+    try {
+      const res = await fetch(`/api/admin/announcements/${item.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (res.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAnnouncementsActionError(data.error || "Failed to delete announcement");
+        return;
+      }
+
+      showToast("Announcement deleted");
+      fetchAnnouncements();
+    } catch (err) {
+      console.error("Delete announcement error:", err);
+      setAnnouncementsActionError("Network error while deleting announcement");
+    }
+  };
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -1118,7 +1439,12 @@ export default function UIModificationsPage() {
       <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden mb-8">
 
         {/* Card header */}
-        <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div
+          onClick={() => setShowInstitutions((prev) => !prev)}
+          className={`p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50/60 transition ${
+            showInstitutions ? "border-b border-slate-100" : ""
+          }`}
+        >
           <div>
             <h2 className="text-lg font-bold text-[#00031D] flex items-center gap-2">
               <svg className="w-5 h-5 text-[#143E66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1130,10 +1456,37 @@ export default function UIModificationsPage() {
               Institutions publicly listed as affiliated with the Board on the website.
             </p>
           </div>
-          <div className="text-xs font-semibold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-lg border border-slate-200 self-start sm:self-center">
-            Total: <strong className="text-slate-900">{institutions.length}</strong>
+          <div className="flex flex-wrap items-center gap-3 self-start sm:self-center">
+            <div className="text-xs font-semibold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-lg border border-slate-200">
+              Total: <strong className="text-slate-900">{institutions.length}</strong>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowInstitutions((prev) => !prev);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                showInstitutions
+                  ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                  : "bg-[#143E66] text-white border-[#143E66] hover:bg-[#0f2e4d] shadow-xs"
+              }`}
+            >
+              <span>{showInstitutions ? "Hide Table / छुपाएं" : "Show Table / देखें"}</span>
+              <svg
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${showInstitutions ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
         </div>
+
+        {showInstitutions && (
+          <div className="animate-in fade-in duration-200">
 
         {/* ── Collapsible "+ Add New" section ── */}
         <div className="p-6 sm:p-8 border-b border-slate-100">
@@ -1472,6 +1825,8 @@ export default function UIModificationsPage() {
             </div>
           </>
         )}
+          </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -1479,7 +1834,12 @@ export default function UIModificationsPage() {
       ══════════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden mb-8">
         {/* Card header */}
-        <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div
+          onClick={() => setShowCourses((prev) => !prev)}
+          className={`p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50/60 transition ${
+            showCourses ? "border-b border-slate-100" : ""
+          }`}
+        >
           <div>
             <h2 className="text-lg font-bold text-[#00031D] flex items-center gap-2">
               <svg className="w-5 h-5 text-[#143E66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1501,8 +1861,33 @@ export default function UIModificationsPage() {
             <span className="bg-amber-50 text-amber-800 px-3 py-1.5 rounded-lg border border-amber-200">
               Certificate: <strong>{courses.filter((c) => c.course_type === "certificate").length}</strong>
             </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowCourses((prev) => !prev);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ml-1 ${
+                showCourses
+                  ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                  : "bg-[#143E66] text-white border-[#143E66] hover:bg-[#0f2e4d] shadow-xs"
+              }`}
+            >
+              <span>{showCourses ? "Hide Table / छुपाएं" : "Show Table / देखें"}</span>
+              <svg
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${showCourses ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
         </div>
+
+        {showCourses && (
+          <div className="animate-in fade-in duration-200">
 
         {/* Collapsible "+ Add New Course" section */}
         <div className="p-6 sm:p-8 border-b border-slate-100">
@@ -1814,6 +2199,250 @@ export default function UIModificationsPage() {
             </table>
           </div>
         )}
+          </div>
+        )}
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          Section 3 — Announcements / घोषणाएं
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden mb-8">
+        {/* Card Header */}
+        <div
+          onClick={() => setShowAnnouncements((prev) => !prev)}
+          className={`p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-50/60 transition ${
+            showAnnouncements ? "border-b border-slate-100" : ""
+          }`}
+        >
+          <div>
+            <h2 className="text-lg font-bold text-[#00031D] flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#143E66]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+              </svg>
+              Announcements / घोषणाएं
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Official board notices and circulars. Displayed dynamically on the landing page and the public /announcements page.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 self-start sm:self-center">
+            <span className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+              Total: <strong className="text-slate-900">{announcements.length}</strong>
+            </span>
+            <span className="bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-lg border border-emerald-200">
+              Published: <strong>{announcements.filter((a) => a.is_published).length}</strong>
+            </span>
+            <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200">
+              Drafts: <strong>{announcements.filter((a) => !a.is_published).length}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAnnouncements((prev) => !prev);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ml-1 ${
+                showAnnouncements
+                  ? "bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
+                  : "bg-[#143E66] text-white border-[#143E66] hover:bg-[#0f2e4d] shadow-xs"
+              }`}
+            >
+              <span>{showAnnouncements ? "Hide Table / छुपाएं" : "Show Table / देखें"}</span>
+              <svg
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${showAnnouncements ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {showAnnouncements && (
+          <div className="animate-in fade-in duration-200">
+
+        {/* Action Bar with "+ Add Announcement" button */}
+        <div className="p-6 sm:p-8 border-b border-slate-100 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleOpenAddAnnouncementModal}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#143E66] hover:bg-[#0f2e4d] text-white text-xs font-bold rounded-lg shadow-sm transition cursor-pointer"
+          >
+            <svg className="w-4 h-4 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            + Add Announcement / नई घोषणा जोड़ें
+          </button>
+        </div>
+
+        {/* Action Error Banner */}
+        {announcementsActionError && (
+          <div className="mx-6 mt-6 p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700 flex items-center justify-between gap-2 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <ErrorIcon />
+              <span>{announcementsActionError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAnnouncementsActionError(null)}
+              className="text-red-500 hover:text-red-800 text-xs font-bold cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* List Error Banner */}
+        {announcementsError && (
+          <div className="m-6 p-4 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700 flex items-center gap-2">
+            <ErrorIcon />
+            <span>{announcementsError}</span>
+          </div>
+        )}
+
+        {/* Loading skeleton / Empty / Table states */}
+        {loadingAnnouncements ? (
+          <div className="p-8 space-y-4">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-14 bg-slate-100 animate-pulse rounded-lg" />
+            ))}
+          </div>
+        ) : announcements.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-slate-600">No announcements yet.</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Click &lsquo;+ Add Announcement&rsquo; above to create one.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold text-[11px] tracking-wider">
+                  <th className="py-3 px-4 w-28">Date</th>
+                  <th className="py-3 px-4 sm:px-6">Title</th>
+                  <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-4 text-center">Attachments</th>
+                  <th className="py-3 px-4 text-center">Published</th>
+                  <th className="py-3 px-4 sm:px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {announcements.map((item) => {
+                  const { day, month, year } = splitDate(item.announcement_date);
+                  const isToggling = togglingAnnouncementId === item.id;
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                          {day} {month} {year}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 sm:px-6">
+                        <p className="font-semibold text-slate-900 leading-snug">{item.title_en}</p>
+                        {item.title_hi && (
+                          <p className="text-xs text-slate-400 mt-0.5 leading-snug">{item.title_hi}</p>
+                        )}
+                        {(item.description_en || item.description_hi) && (
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-1">
+                            {item.description_en || item.description_hi}
+                          </p>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {item.is_published ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Published
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            Draft
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {item.attachment_url && (
+                            <a
+                              href={item.attachment_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-[10px] font-bold hover:bg-red-100 transition"
+                              title="View PDF"
+                            >
+                              PDF
+                            </a>
+                          )}
+                          {item.link_url && (
+                            <a
+                              href={item.link_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold hover:bg-blue-100 transition"
+                              title="External Link"
+                            >
+                              Link
+                            </a>
+                          )}
+                          {!item.attachment_url && !item.link_url && (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <div className="flex justify-center">
+                          <ToggleSwitch
+                            checked={item.is_published}
+                            loading={isToggling}
+                            onToggle={() => handleToggleAnnouncementPublish(item)}
+                            label={`Toggle publish for ${item.title_en}`}
+                          />
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditAnnouncementModal(item)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-[#143E66] hover:text-white text-[#143E66] border border-slate-300 rounded text-xs font-bold transition cursor-pointer"
+                            title="Edit announcement"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAnnouncement(item)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded text-xs font-bold transition cursor-pointer"
+                            title="Delete announcement"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+          </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -1972,6 +2601,306 @@ export default function UIModificationsPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* ══════════════════════════════════════════════════════════════════════
+          Add / Edit Announcement Modal
+      ══════════════════════════════════════════════════════════════════════ */}
+      {announcementModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-[#00031D] text-white px-5 sm:px-6 py-4 flex items-center justify-between border-b-2 border-[#D4AF37] shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-full bg-[#143E66] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                    {editingAnnouncement
+                      ? "Edit Announcement / घोषणा संपादित करें"
+                      : "Add Announcement / नई घोषणा जोड़ें"}
+                  </h3>
+                  <p className="text-[11px] text-slate-300 truncate">
+                    {editingAnnouncement
+                      ? editingAnnouncement.title_en
+                      : "Create a new announcement for students and colleges."}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseAnnouncementModal}
+                disabled={announcementSubmitting}
+                className="text-slate-400 hover:text-white text-lg font-bold transition p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handleSaveAnnouncement} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              {announcementFormError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700 flex items-center gap-2">
+                  <ErrorIcon />
+                  <span>{announcementFormError}</span>
+                </div>
+              )}
+
+              {/* Title (English) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Title (English) <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {announcementForm.title_en.length}/200
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  maxLength={200}
+                  value={announcementForm.title_en}
+                  onChange={(e) =>
+                    setAnnouncementForm((prev) => ({ ...prev, title_en: e.target.value }))
+                  }
+                  placeholder="e.g. Admission Open for Academic Session 2024-25"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition"
+                />
+              </div>
+
+              {/* Title (Hindi) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Title (Hindi) <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {announcementForm.title_hi.length}/200
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  maxLength={200}
+                  value={announcementForm.title_hi}
+                  onChange={(e) =>
+                    setAnnouncementForm((prev) => ({ ...prev, title_hi: e.target.value }))
+                  }
+                  placeholder="e.g. शैक्षणिक सत्र 2024-25 के लिए प्रवेश प्रारंभ"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition"
+                />
+              </div>
+
+              {/* Date & Publish Toggle Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    Announcement Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={announcementForm.announcement_date}
+                    onChange={(e) =>
+                      setAnnouncementForm((prev) => ({ ...prev, announcement_date: e.target.value }))
+                    }
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition font-mono"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-center pt-1 sm:pt-4">
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={announcementForm.is_published}
+                      onChange={(e) =>
+                        setAnnouncementForm((prev) => ({ ...prev, is_published: e.target.checked }))
+                      }
+                      className="w-4 h-4 rounded accent-[#143E66] cursor-pointer"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 block">
+                        Publish Immediately
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        {announcementForm.is_published
+                          ? "Visible to public on landing page & /announcements"
+                          : "Saved as Draft (hidden from public)"}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Description (English) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Description (English) <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {announcementForm.description_en.length}/1000
+                  </span>
+                </div>
+                <textarea
+                  rows={3}
+                  maxLength={1000}
+                  value={announcementForm.description_en}
+                  onChange={(e) =>
+                    setAnnouncementForm((prev) => ({ ...prev, description_en: e.target.value }))
+                  }
+                  placeholder="Enter detailed English description or instructions..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition resize-none"
+                />
+              </div>
+
+              {/* Description (Hindi) */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Description (Hindi) <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {announcementForm.description_hi.length}/1000
+                  </span>
+                </div>
+                <textarea
+                  rows={3}
+                  maxLength={1000}
+                  value={announcementForm.description_hi}
+                  onChange={(e) =>
+                    setAnnouncementForm((prev) => ({ ...prev, description_hi: e.target.value }))
+                  }
+                  placeholder="विवरण हिंदी में दर्ज करें..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition resize-none"
+                />
+              </div>
+
+              {/* PDF Attachment Upload */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  PDF Attachment <span className="text-slate-400 font-normal">(Optional, max 1 MB)</span>
+                </label>
+
+                {announcementForm.attachment_url ? (
+                  <div className="flex items-center justify-between gap-3 p-2.5 bg-white border border-emerald-200 rounded-lg">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shrink-0">
+                        ✓
+                      </span>
+                      <span className="text-xs font-semibold text-slate-800 truncate">
+                        {uploadedFileName || "PDF Attached"}
+                      </span>
+                      <a
+                        href={announcementForm.attachment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-bold text-[#143E66] hover:underline shrink-0"
+                      >
+                        [Preview]
+                      </a>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePdf}
+                      className="text-xs font-bold text-red-600 hover:text-red-800 px-2 py-1 bg-red-50 hover:bg-red-100 rounded transition cursor-pointer shrink-0"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={handlePdfUpload}
+                      disabled={uploadingPdf}
+                      className="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#143E66] file:text-white hover:file:bg-[#0f2e4d] file:cursor-pointer cursor-pointer"
+                    />
+                    {uploadingPdf && (
+                      <p className="text-xs text-[#143E66] font-semibold mt-1.5 flex items-center gap-1.5">
+                        <SpinnerIcon cls="w-3 h-3 text-[#143E66]" />
+                        Uploading PDF to cloud...
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {uploadError && (
+                  <p className="text-xs text-red-600 font-medium">{uploadError}</p>
+                )}
+              </div>
+
+              {/* External Link */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  External Link <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={announcementForm.link_url}
+                  onChange={(e) =>
+                    setAnnouncementForm((prev) => ({ ...prev, link_url: e.target.value }))
+                  }
+                  placeholder="https://example.com/circular"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#143E66] focus:bg-white transition font-mono text-xs"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">Must start with http:// or https://</p>
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleCloseAnnouncementModal}
+                  disabled={announcementSubmitting}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={announcementSubmitting || uploadingPdf}
+                  className="inline-flex items-center gap-2 px-5 py-2 bg-[#143E66] hover:bg-[#0f2e4d] disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold shadow-sm transition cursor-pointer"
+                >
+                  {announcementSubmitting ? (
+                    <>
+                      <SpinnerIcon cls="w-3.5 h-3.5 border-white border-t-transparent" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save Announcement / घोषणा सहेजें
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Success Toast Banner ── */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#00031D] text-white px-4 sm:px-5 py-3 rounded-xl shadow-2xl border-2 border-[#D4AF37] flex items-center gap-3 animate-in slide-in-from-bottom-3 duration-200">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-xs sm:text-sm font-bold text-white tracking-wide">
+            {toastMessage}
+          </span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="text-slate-400 hover:text-white text-xs font-bold ml-2 cursor-pointer"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>

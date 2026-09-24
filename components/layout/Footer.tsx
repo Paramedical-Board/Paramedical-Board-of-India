@@ -115,6 +115,7 @@ export default function Footer() {
               {[
                 { name: "Courses", href: "/courses" },
                 { name: "Affiliated Institutions", href: "/affiliated-institutions" },
+                { name: "Announcements", href: "/announcements" },
                 { name: "Admit Card", href: "/admit-card" },
                 { name: "Examination Results", href: "/result" },
                 { name: "About Board", href: "/about-us" },

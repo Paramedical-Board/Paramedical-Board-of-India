@@ -58,7 +58,7 @@ export default function Navbar() {
         { name: "Result / परिणाम", href: "/result" },
       ],
     },
-    { name: "Announcements", href: "/#announcements" },
+    { name: "Announcements", href: "/announcements" },
     { name: "Results", href: "/result" },
     { name: "Contact Us", href: "/contact-us" },
   ];

@@ -9,6 +9,8 @@ import Notifications from "@/components/home/Notifications";
 import KeyGuidelines from "@/components/home/KeyGuidelines";
 import Footer from "@/components/layout/Footer";
 
+export const revalidate = 60;
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-white">
