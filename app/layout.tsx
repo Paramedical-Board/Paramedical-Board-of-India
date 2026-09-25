@@ -28,12 +28,7 @@ export const metadata: Metadata = {
   keywords: [
     "Indian Paramedical Board of India",
     "Indian Paramedical Board",
-    "IPBI",
-    "Paramedical Board of India",
-    "Paramedical Council",
-    "Paramedical Diploma",
-    "Paramedical Certificate",
-    "Paramedical Courses",
+    "IPBI"
   ],
   icons: {
     icon: [
