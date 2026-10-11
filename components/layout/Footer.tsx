@@ -106,7 +106,7 @@ export default function Footer() {
           </div>
 
           {/* Column 3: Quick Links (lg:col-span-2) */}
-          <div className="lg:col-span-2 lg:px-4 flex flex-col space-y-3 min-w-0">
+          <div className="lg:col-span-2 lg:px-2.5 xl:px-3 flex flex-col space-y-3 min-w-0">
             <h4 className="text-[12.5px] font-black uppercase tracking-wider text-white flex items-center gap-2">
               <span>QUICK LINKS</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#E5C158]" />
@@ -135,30 +135,73 @@ export default function Footer() {
           </div>
 
           {/* Column 4: Academic Council (lg:col-span-2) */}
-          <div className="lg:col-span-2 lg:px-4 flex flex-col space-y-2.5 min-w-0">
-            <h4 className="text-[12.5px] font-black uppercase tracking-wider text-white flex items-center gap-2 mb-3">
+          <div className="lg:col-span-2 lg:px-2 xl:px-3 flex flex-col space-y-2 min-w-0">
+            <h4 className="text-[12.5px] font-black uppercase tracking-wider text-white flex items-center gap-2 mb-2.5">
               <span>ACADEMIC COUNCIL</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#E5C158]" />
             </h4>
 
-            {/* Profile 1 Micro-card */}
-            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 rounded-xl px-3 py-2.5 flex flex-col justify-center transition-all duration-200 shadow-xs group cursor-default">
-              <h5 className="text-[12px] font-bold text-white group-hover:text-[#F1E4C3] transition-colors">
-                Dr. S. K. PATEL
-              </h5>
-              <p className="text-[10.5px] text-[#B8CCE4] mt-0.5">
-                Director / डायरेक्टर
-              </p>
+            {/* Profile 1 Micro-card: Dr. S. K. Patel */}
+            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 rounded-xl px-2.5 py-1.5 flex items-center gap-2 transition-all duration-200 shadow-xs group cursor-default">
+              <div className="relative w-7 h-7 rounded-full overflow-hidden border-2 border-[#E5C158]/50 shrink-0 shadow-xs">
+                <Image
+                  src="/dr-sk-patel.jpg"
+                  alt="Dr. S. K. Patel - Director"
+                  fill
+                  sizes="28px"
+                  className="object-cover object-top"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h5 className="text-[11.5px] font-bold text-white group-hover:text-[#F1E4C3] transition-colors leading-tight whitespace-nowrap">
+                  Dr. S. K. PATEL
+                </h5>
+                <p className="text-[10px] text-[#B8CCE4] mt-0.5 leading-tight">
+                  Director / डायरेक्टर
+                </p>
+              </div>
             </div>
 
-            {/* Profile 2 Micro-card */}
-            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 rounded-xl px-3 py-2.5 flex flex-col justify-center transition-all duration-200 shadow-xs group cursor-default">
-              <h5 className="text-[12px] font-bold text-white group-hover:text-[#F1E4C3] transition-colors">
-                Mr. Oruvan Reddy
-              </h5>
-              <p className="text-[10.5px] text-[#B8CCE4] mt-0.5">
-                Secretary / सचिव
-              </p>
+            {/* Profile 2 Micro-card: Mr. Oruvan Reddy */}
+            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 rounded-xl px-2.5 py-1.5 flex items-center gap-2 transition-all duration-200 shadow-xs group cursor-default">
+              <div className="relative w-7 h-7 rounded-full overflow-hidden border-2 border-[#E5C158]/50 shrink-0 shadow-xs">
+                <Image
+                  src="/oruvan-reddy.jpg"
+                  alt="Mr. Oruvan Reddy - Secretary"
+                  fill
+                  sizes="28px"
+                  className="object-cover object-top"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h5 className="text-[11.5px] font-bold text-white group-hover:text-[#F1E4C3] transition-colors leading-tight whitespace-nowrap">
+                  Mr. Oruvan Reddy
+                </h5>
+                <p className="text-[10px] text-[#B8CCE4] mt-0.5 leading-tight">
+                  Secretary / सचिव
+                </p>
+              </div>
+            </div>
+
+            {/* Profile 3 Micro-card: Miss C. Patel */}
+            <div className="bg-white/[0.06] hover:bg-white/[0.12] border border-[#E5C158]/30 rounded-xl px-2.5 py-1.5 flex items-center gap-2 transition-all duration-200 shadow-xs group cursor-default">
+              <div className="relative w-7 h-7 rounded-full overflow-hidden border-2 border-[#E5C158] shrink-0 shadow-xs">
+                <Image
+                  src="/counselor-c-patel.jpg"
+                  alt="Miss C. Patel - Counselor"
+                  fill
+                  sizes="28px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h5 className="text-[11.5px] font-bold text-white group-hover:text-[#F1E4C3] transition-colors leading-tight whitespace-nowrap">
+                  Miss C. Patel
+                </h5>
+                <p className="text-[10px] text-[#F1E4C3] mt-0.5 leading-tight font-medium">
+                  Counselor / परामर्शदाता
+                </p>
+              </div>
             </div>
           </div>
 

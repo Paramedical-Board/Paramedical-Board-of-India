@@ -610,6 +610,111 @@ export default function AboutUsPage() {
 
         </section>
 
+        {/* ======================================================== */}
+        {/* STUDENT ADVISORY & CAREER COUNSELING CELL (Miss C. Patel)*/}
+        {/* ======================================================== */}
+        <section className="bg-gradient-to-br from-[#0E345F] via-[#134275] to-[#0A2545] rounded-3xl border-2 border-[#D4AF37]/40 shadow-xl overflow-hidden text-white relative">
+          {/* Subtle decorative background light */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="p-6 sm:p-10 lg:p-12 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+              
+              {/* Photo & Profile Card (Left 4 Cols) */}
+              <div className="lg:col-span-4 flex flex-col items-center text-center">
+                <div className="relative w-44 h-44 sm:w-52 sm:h-52 rounded-2xl overflow-hidden border-4 border-[#E5C158] shadow-2xl bg-white/10 group">
+                  <Image
+                    src="/counselor-c-patel.jpg"
+                    alt="Miss C. Patel - Academic Counselor"
+                    fill
+                    sizes="(max-width: 640px) 180px, 220px"
+                    className="object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0A2545]/70 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute bottom-2 inset-x-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E5C158] text-[#0A2545] text-[11px] font-black uppercase tracking-wider shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0A2545]" />
+                      Official Counselor
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    Miss C. Patel
+                  </h3>
+                  <p className="text-sm font-semibold text-[#F1E4C3] mt-0.5">
+                    Academic Counselor / शैक्षणिक परामर्शदाता
+                  </p>
+                  <p className="text-xs text-slate-300 mt-1">
+                    Academic Council &amp; Institutional Advisory Cell
+                  </p>
+                </div>
+              </div>
+
+              {/* Message, Details & Helpline Action (Right 8 Cols) */}
+              <div className="lg:col-span-8 space-y-6">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#E5C158] border border-white/15 mb-3">
+                    <span className="w-2 h-2 rounded-full bg-[#E5C158] animate-pulse" />
+                    Academic Counseling &amp; Institutional Affiliation Cell
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                    Empowering Healthcare Careers &amp; Institutional Affiliation
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#F1E4C3] font-medium mt-1">
+                    छात्र मार्गदर्शन, सही पाठ्यक्रम चयन एवं कॉलेज संबद्धता हेतु समर्पित प्रकोष्ठ
+                  </p>
+                </div>
+
+                {/* Quote / Message Box */}
+                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-5 sm:p-6 text-slate-100 text-sm sm:text-[15px] leading-relaxed italic relative">
+                  <span className="text-4xl text-[#E5C158] font-serif leading-none absolute top-2 left-3 opacity-40">“</span>
+                  <p className="relative z-10 pl-3">
+                    Paramedical disciplines are the backbone of modern clinical diagnostics and healthcare delivery. Our primary objective is to guide learners in identifying their aptitude and selecting accredited curriculum paths, while actively assisting healthcare training institutes across India in securing recognized board affiliations, standardizing laboratory infrastructure, and upholding clinical excellence benchmarks.
+                  </p>
+                </div>
+
+                {/* 3 Pillars / Support Points: Student + Affiliation + Standards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center sm:text-left">
+                    <div className="text-xs font-bold text-[#E5C158]">Student Career Counseling</div>
+                    <div className="text-[11px] text-slate-300 mt-0.5">DMLT, OTT, Radiology &amp; Nursing roadmaps</div>
+                  </div>
+                  <div className="bg-white/5 border border-[#E5C158]/40 rounded-xl p-3 text-center sm:text-left bg-gradient-to-b from-white/10 to-transparent">
+                    <div className="text-xs font-bold text-[#E5C158]">Institutional Affiliation</div>
+                    <div className="text-[11px] text-slate-300 mt-0.5">New college affiliation, inspection &amp; recognition norms</div>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center sm:text-left">
+                    <div className="text-xs font-bold text-[#E5C158]">Curriculum &amp; Exam Standards</div>
+                    <div className="text-[11px] text-slate-300 mt-0.5">Standardized clinical training &amp; board certifications</div>
+                  </div>
+                </div>
+
+                {/* Direct Dial Helpline Banner */}
+                <div className="pt-2 flex flex-col sm:flex-row items-center gap-4">
+                  <a
+                    href="tel:02223463113"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-[#E5C158] hover:bg-[#F0CF68] text-[#0A2545] font-black px-6 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 group text-sm"
+                  >
+                    <svg className="w-4 h-4 text-[#0A2545] group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    <span>Connect with Helpdesk: 022 2346 3113</span>
+                  </a>
+
+                  <span className="text-xs text-slate-300 text-center sm:text-left">
+                    Student Guidance &amp; Affiliation Helpline (10:00 AM – 5:00 PM IST)
+                  </span>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </section>
+
       </main>
 
       {/* Footer */}

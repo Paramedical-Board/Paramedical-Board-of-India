@@ -38,7 +38,7 @@ export default function ResultLayout({
 
   return (
     <div
-      className={`result-marksheet-page-wrapper w-[794px] max-w-full bg-white mx-auto p-7 sm:p-8 text-[#1e293b] border border-slate-300 shadow-md print:shadow-none print:border-none relative font-sans ${className}`}
+      className={`result-marksheet-page-wrapper w-[794px] max-w-full bg-white mx-auto p-7 sm:p-9 print:p-0 text-[#1e293b] border border-slate-300 shadow-md print:shadow-none print:border-none relative font-sans ${className}`}
       style={{
         boxSizing: "border-box",
       }}
@@ -48,12 +48,14 @@ export default function ResultLayout({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm 12mm;
+            margin: 10mm 15mm;
           }
-          body {
+          html, body {
             background-color: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           .no-print {
             display: none !important;
@@ -63,9 +65,13 @@ export default function ResultLayout({
             max-width: 100% !important;
             border: none !important;
             box-shadow: none !important;
-            padding: 8px 10px !important;
+            padding: 6px 12px !important;
             margin: 0 auto !important;
             box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
         }
       `}</style>
@@ -73,23 +79,46 @@ export default function ResultLayout({
       {/* Background Watermark (Option A: Grand Middle Span ~390px) */}
       <div
         className="pointer-events-none absolute inset-x-0 top-[220px] bottom-[260px] flex items-center justify-center overflow-hidden z-0 select-none"
+        style={{ pointerEvents: "none" }}
         aria-hidden="true"
       >
         <img
           src="/logo.png"
           alt=""
-          className="w-[390px] h-[390px] max-w-[80%] object-contain opacity-[0.18] select-none"
+          width={390}
+          height={390}
+          style={{
+            width: "390px",
+            height: "390px",
+            maxWidth: "75%",
+            objectFit: "contain",
+            opacity: 0.12,
+            display: "block",
+          }}
+          className="select-none"
         />
       </div>
 
       {/* 1. Header with Board Logo & Titles */}
       <div className="flex items-center justify-between gap-3 pb-2 relative z-10">
         {/* Left Circular Logo */}
-        <div className="w-[74px] h-[74px] shrink-0 relative flex items-center justify-center">
+        <div
+          className="shrink-0 relative flex items-center justify-center"
+          style={{ width: "68px", height: "68px", minWidth: "68px", minHeight: "68px" }}
+        >
           <img
             src="/logo.png"
             alt="Indian Paramedical Board Logo"
-            className="w-full h-full object-contain"
+            width={68}
+            height={68}
+            style={{
+              width: "68px",
+              height: "68px",
+              maxWidth: "68px",
+              maxHeight: "68px",
+              objectFit: "contain",
+              display: "block",
+            }}
           />
         </div>
 
@@ -113,7 +142,10 @@ export default function ResultLayout({
         </div>
 
         {/* Spacer to keep Title perfectly centered */}
-        <div className="w-[74px] shrink-0 hidden sm:block"></div>
+        <div
+          className="shrink-0 hidden sm:block"
+          style={{ width: "68px", minWidth: "68px" }}
+        ></div>
       </div>
 
       {/* Maroon Divider */}
@@ -376,7 +408,7 @@ export default function ResultLayout({
       </div>
 
       {/* 6. Grading Criteria Legend */}
-      <div className="border border-slate-200 rounded p-2 mb-3 bg-white/60 text-[9px] text-slate-600 relative z-10">
+      <div className="border border-slate-200 rounded p-2.5 mb-6 sm:mb-8 print:mb-6 bg-white/60 text-[9px] text-slate-600 relative z-10">
         <div className="font-bold text-slate-700 uppercase mb-1">
           Grading Scale &amp; Passing Criteria:
         </div>
@@ -393,14 +425,19 @@ export default function ResultLayout({
       </div>
 
       {/* 7. Signatures & Secretary Block */}
-      <div className="flex items-end justify-end px-2 pt-4 pb-1 mt-2 relative z-10">
+      <div className="flex items-end justify-end px-2 pt-6 sm:pt-8 print:pt-6 pb-2 mt-4 print:mt-4 relative z-10 break-inside-avoid print:break-inside-avoid">
         {/* Secretary / सचिव */}
         <div className="text-center min-w-[190px]">
-          <div className="h-[42px] flex items-end justify-center pb-0.5">
+          <div className="h-[44px] flex items-end justify-center pb-1">
             <img
               src="/Signature.png"
               alt="Secretary Signature"
-              className="h-[38px] max-w-[140px] object-contain"
+              style={{
+                height: "40px",
+                maxWidth: "140px",
+                objectFit: "contain",
+                display: "block",
+              }}
             />
           </div>
           <div className="border-t border-slate-400 pt-1">

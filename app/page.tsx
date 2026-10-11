@@ -4,6 +4,7 @@ import AccreditationsBar from "@/components/home/AccreditationsBar";
 import StatsBar from "@/components/home/StatsBar";
 import CoreFunctions from "@/components/home/CoreFunctions";
 import Specializations from "@/components/home/Specializations";
+import CounselorGuidanceBanner from "@/components/home/CounselorGuidanceBanner";
 import NepalEquivalenceBanner from "@/components/home/NepalEquivalenceBanner";
 import Notifications from "@/components/home/Notifications";
 import KeyGuidelines from "@/components/home/KeyGuidelines";
@@ -20,6 +21,7 @@ export default function Home() {
       <StatsBar />
       <CoreFunctions />
       <Specializations />
+      <CounselorGuidanceBanner />
       <NepalEquivalenceBanner />
       <Notifications />
       <KeyGuidelines />

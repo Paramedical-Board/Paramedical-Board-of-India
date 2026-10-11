@@ -421,10 +421,12 @@
         }
 
         @media print {
-            body {
+            html, body {
                 background-color: #ffffff;
                 padding: 0;
                 margin: 0;
+                height: 100%;
+                overflow: hidden;
             }
 
             .no-print-bar {
@@ -432,15 +434,18 @@
             }
 
             .marksheet-container {
-                width: 210mm;
-                height: 297mm;
-                min-height: 297mm;
-                max-height: 297mm;
+                width: 100%;
+                max-width: 210mm;
+                height: 295mm;
+                max-height: 295mm;
+                box-sizing: border-box;
                 border: none;
                 box-shadow: none;
-                padding: 15mm 16mm 15mm 16mm;
+                padding: 12mm 15mm;
                 page-break-after: avoid;
                 page-break-inside: avoid;
+                break-inside: avoid;
+                break-after: avoid;
             }
 
             @page {
