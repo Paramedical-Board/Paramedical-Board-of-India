@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabase";
 import AffiliatedInstitutionsClient, {
   AffiliatedInstitution,
 } from "./AffiliatedInstitutionsClient";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Affiliated Institutions",
+  description:
+    "Official list of paramedical colleges and study centres affiliated with the Indian Paramedical Board of India for certified paramedical education and practical training.",
+  alternates: { canonical: "/affiliated-institutions" },
+};
 
 export default async function AffiliatedInstitutionsPage() {
   const { data, error } = await supabaseAdmin

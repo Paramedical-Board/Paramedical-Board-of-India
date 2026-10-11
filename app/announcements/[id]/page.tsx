@@ -18,11 +18,12 @@ export async function generateMetadata({ params }: DetailProps): Promise<Metadat
   const item = await getAnnouncementById(id);
   if (!item) {
     return {
-      title: "Announcement Not Found | Indian Paramedical Board of India",
+      title: "Announcement Not Found",
     };
   }
   return {
-    title: `${item.title_en} | Announcements | Indian Paramedical Board of India`,
+    title: `${item.title_en} | Announcements`,
+    alternates: { canonical: `/announcements/${item.id}` },
     description: item.description_en || item.description_hi || undefined,
   };
 }

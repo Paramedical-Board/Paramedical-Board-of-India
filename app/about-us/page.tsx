@@ -6,7 +6,8 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "About Us | Indian Paramedical Board of India",
+  title: "About Us",
+  alternates: { canonical: "/about-us" },
   description:
     "Learn about the Indian Paramedical Board of India (IPBI), an autonomous body regulating, standardizing, and promoting paramedical education across the nation.",
 };

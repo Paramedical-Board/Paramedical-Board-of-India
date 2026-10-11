@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabase";
 import CoursesClient, { CourseItem } from "./CoursesClient";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Paramedical Diploma & Certificate Courses",
+  description:
+    "Explore paramedical diploma and certificate courses approved by the Indian Paramedical Board of India, with duration, eligibility, study mode, and career scope.",
+  alternates: { canonical: "/courses" },
+};
 
 export default async function CoursesPage() {
   const { data, error } = await supabaseAdmin

@@ -7,7 +7,8 @@ import ContactForm from "@/components/contact/ContactForm";
 import { ContactPageEmailLink, ContactPageWebLink } from "@/components/common/DynamicDomain";
 
 export const metadata: Metadata = {
-  title: "Contact Us | Indian Paramedical Board of India",
+  title: "Contact Us",
+  alternates: { canonical: "/contact-us" },
   description:
     "Official Contact & Helpdesk of the Indian Paramedical Board of India. Find headquarters address, telephone numbers, and submit official inquiries.",
 };

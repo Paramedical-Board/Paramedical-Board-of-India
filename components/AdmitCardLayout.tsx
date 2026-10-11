@@ -104,7 +104,7 @@ export default function AdmitCardLayout({
         >
           <img
             src="/logo.png"
-            alt="Indian Paramedical Board Logo"
+            alt="Indian Paramedical Board of India Logo"
             width={74}
             height={74}
             style={{

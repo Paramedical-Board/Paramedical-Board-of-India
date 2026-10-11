@@ -7,7 +7,8 @@ import Footer from "@/components/layout/Footer";
 import { CAREERS_DATA } from "@/data/careersData";
 
 export const metadata: Metadata = {
-  title: "Paramedical Careers & Specializations | Indian Paramedical Board of India",
+  title: "Paramedical Careers & Specializations",
+  alternates: { canonical: "/careers" },
   description:
     "Explore high-demand healthcare careers and paramedical specializations with eligibility, job duties, salary expectations, and accredited board diplomas.",
 };

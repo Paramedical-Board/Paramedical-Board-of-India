@@ -35,7 +35,7 @@ export default function Footer() {
 
               {/* Tagline */}
               <p className="text-[11.5px] text-[#C8DCF2] leading-relaxed max-w-[280px] pl-0.5">
-                Autonomous National Board for standardizing excellence in paramedical, allied healthcare education and institutional accreditation across India.
+                Indian Paramedical Board of India — Autonomous National Board for standardizing excellence in paramedical, allied healthcare education and institutional accreditation across India.
               </p>
             </div>
 
@@ -248,7 +248,7 @@ export default function Footer() {
                   </svg>
                 </div>
                 <div className="text-[7.5px] font-bold text-[#1E293B] leading-tight truncate">
-                  <div className="text-[#143E66] truncate">Indian Paramedical Board</div>
+                  <div className="text-[#143E66] truncate">Indian Paramedical Board of India</div>
                   <div className="text-gray-500 font-medium truncate">Mumbai 400051</div>
                 </div>
               </div>

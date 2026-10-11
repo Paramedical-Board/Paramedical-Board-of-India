@@ -20,20 +20,21 @@ export async function generateMetadata({
 
   if (!career) {
     return {
-      title: "Career Not Found | Indian Paramedical Board of India",
+      title: "Career Not Found",
       description: "The requested paramedical specialization could not be found.",
     };
   }
 
   return {
-    title: `${career.en.title} | Career Guide | Indian Paramedical Board of India`,
+    title: `${career.en.title} | Career Guide`,
+    alternates: { canonical: `/careers/${career.slug}` },
     description: `${career.en.tagline} Discover job roles, eligibility, starting salary, career progression, and accredited courses.`,
     keywords: [
       career.en.title,
       career.hi.title,
       "Paramedical Career",
       "Allied Health Science",
-      "Paramedical Board of India",
+      "Indian Paramedical Board of India",
       "Paramedical Diploma",
     ],
   };

@@ -108,7 +108,7 @@ export default function ResultLayout({
         >
           <img
             src="/logo.png"
-            alt="Indian Paramedical Board Logo"
+            alt="Indian Paramedical Board of India Logo"
             width={68}
             height={68}
             style={{

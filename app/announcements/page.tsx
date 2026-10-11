@@ -10,7 +10,8 @@ import { getAnnouncementsPage } from "@/lib/announcements";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Announcements | Indian Paramedical Board of India",
+  title: "Announcements",
+  alternates: { canonical: "/announcements" },
   description:
     "Official notices, exam schedules, affiliation circulars, and updates from the Indian Paramedical Board of India.",
 };
