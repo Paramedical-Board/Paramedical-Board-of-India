@@ -15,7 +15,7 @@ interface MenuItem {
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileStudentCornerOpen, setMobileStudentCornerOpen] = useState(false);
+  const [openMobileDropdown, setOpenMobileDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash) {
@@ -56,6 +56,16 @@ export default function Navbar() {
         { name: "I-Card Download", isPlaceholder: true, badge: "Coming Soon" },
         { name: "Admit Card", href: "/admit-card" },
         { name: "Result / परिणाम", href: "/result" },
+      ],
+    },
+    {
+      name: "Forms",
+      dropdownItems: [
+        {
+          name: "Enrollment Form",
+          href: "/forms/paramedical-enrollment-form.pdf",
+          download: "Paramedical_Enrollment_Form.pdf",
+        },
       ],
     },
     { name: "Announcements", href: "/announcements" },
@@ -161,16 +171,18 @@ export default function Navbar() {
           <nav className="flex flex-col space-y-1 text-sm font-medium text-white">
             {menuItems.map((item) => {
               if (item.dropdownItems) {
+                const isDropdownOpen = openMobileDropdown === item.name;
+
                 return (
                   <div key={item.name} className="flex flex-col border-b border-white/10 pb-1">
                     <button
                       type="button"
-                      onClick={() => setMobileStudentCornerOpen(!mobileStudentCornerOpen)}
+                      onClick={() => setOpenMobileDropdown(isDropdownOpen ? null : item.name)}
                       className="flex items-center justify-between w-full px-3 py-2.5 rounded-md hover:bg-white/10 text-left font-semibold text-[#F1E4C3]"
                     >
                       <span>{item.name}</span>
                       <svg
-                        className={`w-4 h-4 transition-transform duration-200 ${mobileStudentCornerOpen ? "rotate-180" : ""}`}
+                        className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -179,7 +191,7 @@ export default function Navbar() {
                       </svg>
                     </button>
 
-                    {mobileStudentCornerOpen && (
+                    {isDropdownOpen && (
                       <div className="pl-4 pr-2 py-1 space-y-1 bg-[#0d2a45]/60 rounded-md mt-1">
                         {item.dropdownItems.map((subItem) => {
                           if (subItem.isPlaceholder) {
@@ -200,15 +212,25 @@ export default function Navbar() {
                             <Link
                               key={subItem.name}
                               href={subItem.href || "#"}
+                              download={subItem.download}
                               onClick={() => setMobileMenuOpen(false)}
                               className="flex items-center justify-between px-3 py-2 text-xs text-white hover:bg-white/15 rounded transition-colors"
                             >
-                              <span>{subItem.name}</span>
-                              {subItem.badge && (
+                              <span className="flex items-center gap-2">{subItem.name}</span>
+                              {subItem.badge ? (
                                 <span className="text-[10px] bg-[#B13B1C] px-1.5 py-0.5 rounded text-white font-bold">
                                   {subItem.badge}
                                 </span>
-                              )}
+                              ) : subItem.download ? (
+                                <svg
+                                  className="w-3.5 h-3.5 text-[#D4AF37]"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12v-8m0 8l-3-3m3 3l3-3" />
+                                </svg>
+                              ) : null}
                             </Link>
                           );
                         })}

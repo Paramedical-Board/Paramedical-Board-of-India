@@ -9,6 +9,8 @@ export interface DropdownItem {
   href?: string;
   isPlaceholder?: boolean;
   badge?: string;
+  download?: boolean | string;
+  target?: string;
 }
 
 interface NavDropdownProps {
@@ -113,6 +115,8 @@ export default function NavDropdown({ name, items, active = false }: NavDropdown
                 <Link
                   key={item.name}
                   href={item.href}
+                  download={item.download}
+                  target={item.target}
                   onClick={() => setIsOpen(false)}
                   className={`px-4 py-2.5 text-xs sm:text-[13px] flex items-center justify-between transition-colors group ${
                     isItemActive
@@ -120,13 +124,22 @@ export default function NavDropdown({ name, items, active = false }: NavDropdown
                       : "font-semibold text-slate-700 hover:text-[#143E66] hover:bg-[#EBF4FA]"
                   }`}
                 >
-                  <span className="group-hover:translate-x-0.5 transition-transform">
+                  <span className="group-hover:translate-x-0.5 transition-transform flex items-center gap-2">
                     {item.name}
                   </span>
                   {item.badge ? (
                     <span className="text-[10px] font-bold bg-[#B13B1C] text-white px-1.5 py-0.5 rounded shadow-2xs">
                       {item.badge}
                     </span>
+                  ) : item.download ? (
+                    <svg
+                      className="w-4 h-4 text-[#143E66]/70 group-hover:text-[#143E66] transition-colors"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12v-8m0 8l-3-3m3 3l3-3" />
+                    </svg>
                   ) : (
                     <svg
                       className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#143E66] transition-colors"

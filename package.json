@@ -15,6 +15,7 @@
     "imagekit": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "next": "16.3.4",
+    "pdf-lib": "^1.17.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.87.0",
