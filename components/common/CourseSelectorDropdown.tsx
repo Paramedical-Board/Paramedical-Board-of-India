@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-interface CourseOption {
+export interface CourseOption {
   id: string;
   code: string;
   title: string;
@@ -14,9 +14,10 @@ interface CourseOption {
   label: string;
 }
 
-interface CourseSelectorDropdownProps {
+export interface CourseSelectorDropdownProps {
   value: string;
-  onChange: (course: string) => void;
+  onChange: (course: string, courseOption?: CourseOption) => void;
+  courses?: CourseOption[];
   placeholder?: string;
   hasError?: boolean;
   errorMessage?: string;
@@ -31,6 +32,7 @@ interface CourseSelectorDropdownProps {
 export default function CourseSelectorDropdown({
   value,
   onChange,
+  courses: coursesProp,
   placeholder = "-- Select Desired Course / पाठ्यक्रम चुनें --",
   hasError = false,
   errorMessage,
@@ -42,13 +44,15 @@ export default function CourseSelectorDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "diploma" | "certificate">("all");
-  const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [internalCourses, setInternalCourses] = useState<CourseOption[]>([]);
+  const courses = coursesProp && coursesProp.length > 0 ? coursesProp : internalCourses;
   const [fetchError, setFetchError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Fetch courses from DB once ───────────────────────────────────────────
+  // ── Fetch courses from DB once if not passed via props ──────────────────
   useEffect(() => {
+    if (coursesProp && coursesProp.length > 0) return;
     let cancelled = false;
     fetch("/api/public/courses")
       .then((r) => r.json())
@@ -70,14 +74,14 @@ export default function CourseSelectorDropdown({
             // canonical label matches registrationSchema.ts strings exactly
             label: `${c.title} (${c.code})`,
           }));
-          setCourses(mapped);
+          setInternalCourses(mapped);
         }
       })
       .catch(() => {
         if (!cancelled) setFetchError(true);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [coursesProp]);
 
   // ── Close on outside click / Escape ─────────────────────────────────────
   useEffect(() => {
@@ -139,8 +143,8 @@ export default function CourseSelectorDropdown({
   );
   const isSelectedTwoYear = selectedCourse?.is_two_year ?? false;
 
-  const handleSelect = (label: string) => {
-    onChange(label);
+  const handleSelect = (course: CourseOption) => {
+    onChange(course.label, course);
     setIsOpen(false);
     setSearchQuery("");
   };
@@ -306,7 +310,7 @@ export default function CourseSelectorDropdown({
                             <button
                               key={course.id}
                               type="button"
-                              onClick={() => handleSelect(course.label)}
+                              onClick={() => handleSelect(course)}
                               className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-lg flex items-start sm:items-center justify-between gap-2.5 transition-colors cursor-pointer active:bg-slate-200 ${
                                 isSelected
                                   ? "bg-blue-50 text-[#143E66] font-bold ring-1 ring-[#143E66]/20"
@@ -353,7 +357,7 @@ export default function CourseSelectorDropdown({
                             <button
                               key={course.id}
                               type="button"
-                              onClick={() => handleSelect(course.label)}
+                              onClick={() => handleSelect(course)}
                               className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-lg flex items-start sm:items-center justify-between gap-2.5 transition-colors cursor-pointer active:bg-slate-200 ${
                                 isSelected
                                   ? "bg-blue-50 text-[#143E66] font-bold ring-1 ring-[#143E66]/20"

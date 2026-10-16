@@ -59,6 +59,8 @@ export function isTwoYearCourse(
     "pcc-530",
     "pcc-531",
     "pcc-533",
+    "dmlt",
+    "dmlt-520",
   ];
   const lower = courseName.toLowerCase();
   if (twoYearKeywords.some((kw) => lower.includes(kw))) return true;

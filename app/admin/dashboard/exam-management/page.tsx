@@ -8,7 +8,7 @@ import {
   DIPLOMA_COURSES,
   CERTIFICATE_COURSES,
 } from "@/components/student/registration/registrationSchema";
-import CourseSelectorDropdown from "@/components/common/CourseSelectorDropdown";
+import CourseSelectorDropdown, { CourseOption } from "@/components/common/CourseSelectorDropdown";
 import {
   getCourseSessionOptions,
   isTwoYearCourse,
@@ -87,6 +87,44 @@ export default function ExamManagementHubPage() {
   const [selectedSessionKey, setSelectedSessionKey] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"subjects" | "datesheet" | "roll_admit" | "results">("subjects");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [coursesList, setCoursesList] = useState<CourseOption[]>([]);
+  const [coursesLoaded, setCoursesLoaded] = useState(false);
+
+  // Fetch active courses from DB to accurately resolve course durations (is_two_year)
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/public/courses")
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.courses) {
+          const mapped: CourseOption[] = data.courses.map((c: {
+            id: string;
+            code: string;
+            title: string;
+            course_type: "diploma" | "certificate";
+            is_two_year: boolean;
+          }) => ({
+            id: c.id,
+            code: c.code,
+            title: c.title,
+            course_type: c.course_type,
+            is_two_year: Boolean(c.is_two_year),
+            label: `${c.title} (${c.code})`,
+          }));
+          setCoursesList(mapped);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load courses:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setCoursesLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Initialize state from URL query parameters or sessionStorage on client mount
   useEffect(() => {
@@ -152,10 +190,29 @@ export default function ExamManagementHubPage() {
     }
   }, [activeTab, selectedCourse, selectedSessionKey, isInitialized]);
 
+  // Match selected course from DB courses list
+  const selectedCourseData = useMemo(() => {
+    if (!coursesList.length) return null;
+    return (
+      coursesList.find(
+        (c) =>
+          c.label === selectedCourse ||
+          c.title === selectedCourse ||
+          c.code === selectedCourse ||
+          (c.code && selectedCourse.includes(c.code))
+      ) || null
+    );
+  }, [coursesList, selectedCourse]);
+
+  // Dynamic 2-year determination using DB is_two_year flag (with keyword fallback)
+  const is2Year = useMemo(() => {
+    return isTwoYearCourse(selectedCourse, selectedCourseData?.is_two_year);
+  }, [selectedCourse, selectedCourseData]);
+
   // Dynamic Session Options based on course duration
   const sessionOptions = useMemo(() => {
-    return getCourseSessionOptions(selectedCourse);
-  }, [selectedCourse]);
+    return getCourseSessionOptions(selectedCourse, selectedCourseData?.is_two_year);
+  }, [selectedCourse, selectedCourseData]);
 
   const activeSessionOption = useMemo<CourseSessionOption>(() => {
     const found = sessionOptions.find((o) => o.key === selectedSessionKey);
@@ -372,11 +429,11 @@ export default function ExamManagementHubPage() {
     }
   }, []);
 
-  // Sync data whenever isInitialized is true and course/session changes
+  // Sync data whenever isInitialized is true, coursesLoaded is true, and course/session changes
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !coursesLoaded) return;
     syncAllData(selectedCourse, activeSessionOption);
-  }, [isInitialized, selectedCourse, activeSessionOption, syncAllData]);
+  }, [isInitialized, coursesLoaded, selectedCourse, activeSessionOption, syncAllData]);
 
   // Re-fetch allotted students roster whenever switching to the roll_admit tab
   useEffect(() => {
@@ -386,9 +443,18 @@ export default function ExamManagementHubPage() {
   }, [activeTab, activeSession?.id, activeSessionOption.year_number, fetchAllottedStudents]);
 
   // Handlers for course and session dropdown changes
-  const handleCourseChange = (newCourse: string) => {
+  const handleCourseChange = (newCourse: string, courseObj?: CourseOption) => {
     setSelectedCourse(newCourse);
-    const newOpts = getCourseSessionOptions(newCourse);
+    const targetObj =
+      courseObj ||
+      coursesList.find(
+        (c) =>
+          c.label === newCourse ||
+          c.title === newCourse ||
+          c.code === newCourse ||
+          (c.code && newCourse.includes(c.code))
+      );
+    const newOpts = getCourseSessionOptions(newCourse, targetObj?.is_two_year);
     const defaultKey = newOpts[0]?.key || "";
     setSelectedSessionKey(defaultKey);
     setAllotResultMsg(null);
@@ -886,8 +952,6 @@ export default function ExamManagementHubPage() {
     return displayDatesheetRows.filter((s) => !s.exam_date || !s.exam_time).length;
   }, [displayDatesheetRows]);
 
-  const is2Year = isTwoYearCourse(selectedCourse);
-
   return (
     <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
       {/* Top Banner & Header */}
@@ -922,6 +986,7 @@ export default function ExamManagementHubPage() {
             <CourseSelectorDropdown
               value={selectedCourse}
               onChange={handleCourseChange}
+              courses={coursesList.length ? coursesList : undefined}
               buttonClassName="font-bold text-[#143E66] border-slate-300"
             />
           </div>
