@@ -75,3 +75,53 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   return NextResponse.json({ success: true, registration: data });
 }
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const token = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+  if (!token || !verifyAdminToken(token)) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  }
+
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: 'Application ID is required' }, { status: 400 });
+  }
+
+  try {
+    // 1. Delete associated student_subject_marks if any
+    const { error: marksError } = await supabaseAdmin
+      .from('student_subject_marks')
+      .delete()
+      .eq('registration_id', id);
+
+    if (marksError) {
+      console.warn('Warning: error deleting subject marks:', marksError);
+    }
+
+    // 2. Delete associated registration_queries if any
+    const { error: queriesError } = await supabaseAdmin
+      .from('registration_queries')
+      .delete()
+      .eq('registration_id', id);
+
+    if (queriesError) {
+      console.warn('Warning: error deleting registration queries:', queriesError);
+    }
+
+    // 3. Delete student registration record
+    const { error: regError } = await supabaseAdmin
+      .from('student_registrations')
+      .delete()
+      .eq('id', id);
+
+    if (regError) {
+      console.error('Admin delete application error:', regError);
+      return NextResponse.json({ error: regError.message || 'Failed to delete application' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Application deleted successfully' });
+  } catch (err: any) {
+    console.error('Delete application exception:', err);
+    return NextResponse.json({ error: err.message || 'Internal server error while deleting' }, { status: 500 });
+  }
+}

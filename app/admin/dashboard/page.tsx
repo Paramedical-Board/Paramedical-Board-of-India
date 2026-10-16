@@ -27,6 +27,39 @@ export default function AdminApplicationsDashboardPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
+  // Delete state
+  const [appToDelete, setAppToDelete] = useState<ApplicationItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const confirmDelete = async () => {
+    if (!appToDelete) return;
+    try {
+      setDeleting(true);
+      setDeleteError(null);
+      const res = await fetch(`/api/admin/applications/${appToDelete.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error || "Failed to delete application.");
+        return;
+      }
+
+      setApplications((prev) => prev.filter((a) => a.id !== appToDelete.id));
+      const deletedName = appToDelete.candidate_name;
+      setAppToDelete(null);
+      setToastMessage(`Application for "${deletedName}" deleted successfully.`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err) {
+      console.error("Delete application error:", err);
+      setDeleteError("Network error occurred while deleting.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const fetchApplications = async () => {
     try {
       setLoading(true);
@@ -323,15 +356,31 @@ export default function AdminApplicationsDashboardPage() {
                   </div>
 
                   {/* Card Action Button */}
-                  <Link
-                    href={`/admin/dashboard/applications/${app.id}`}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 bg-[#143E66] hover:bg-[#0a233a] active:bg-[#061828] text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
-                  >
-                    <span>Review Application / आवेदन देखें</span>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
+                  <div className="flex items-center gap-2 pt-1">
+                    <Link
+                      href={`/admin/dashboard/applications/${app.id}`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-[#143E66] hover:bg-[#0a233a] active:bg-[#061828] text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
+                    >
+                      <span>Review Application / आवेदन देखें</span>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setAppToDelete(app);
+                      }}
+                      className="inline-flex items-center justify-center gap-1 py-2 px-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
+                      title="Delete Application / आवेदन हटाएं"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Delete</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -379,15 +428,31 @@ export default function AdminApplicationsDashboardPage() {
                         <StatusBadge status={app.status} size="sm" />
                       </td>
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <Link
-                          href={`/admin/dashboard/applications/${app.id}`}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold rounded shadow-2xs hover:shadow-xs transition-all cursor-pointer"
-                        >
-                          <span>Review</span>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </Link>
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/admin/dashboard/applications/${app.id}`}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#143E66] hover:bg-[#0a233a] text-white text-xs font-bold rounded shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                          >
+                            <span>Review</span>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteError(null);
+                              setAppToDelete(app);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold rounded shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                            title="Delete Application / आवेदन हटाएं"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -397,6 +462,100 @@ export default function AdminApplicationsDashboardPage() {
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {appToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden">
+            <div className="p-5 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                    Delete Student Application?
+                  </h3>
+                  <p className="text-xs text-slate-500">छात्र का आवेदन रिकॉर्ड हमेशा के लिए हटाएं</p>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-red-50/70 rounded-lg border border-red-100 text-xs sm:text-sm text-slate-700 space-y-1">
+                <p className="text-slate-600">Are you sure you want to delete this record?</p>
+                <p className="font-bold text-slate-900 text-sm pt-0.5">
+                  {appToDelete.candidate_name}
+                </p>
+                <p className="text-xs text-slate-600">
+                  Enrollment: <span className="font-mono font-semibold text-slate-800">{appToDelete.enrollment_no || appToDelete.registration_no || "N/A"}</span>
+                </p>
+                <p className="text-xs text-slate-600">
+                  Course: <span className="font-semibold text-slate-800">{appToDelete.course}</span>
+                </p>
+              </div>
+
+              <p className="mt-3 text-xs text-red-600 font-medium">
+                Warning: This action is permanent and will completely remove this application from the database.
+              </p>
+
+              {deleteError && (
+                <div className="mt-3 p-2.5 bg-red-100 border border-red-300 text-red-800 text-xs rounded font-medium">
+                  {deleteError}
+                </div>
+              )}
+
+              <div className="mt-6 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => {
+                    setAppToDelete(null);
+                    setDeleteError(null);
+                  }}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel / रद्द करें
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={confirmDelete}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete Record / हटाएं
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-700 text-white text-xs sm:text-sm font-semibold px-4 py-3 rounded-lg shadow-xl flex items-center gap-2 animate-in slide-in-from-bottom-2">
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }
+
