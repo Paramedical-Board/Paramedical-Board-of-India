@@ -80,23 +80,51 @@ export interface CourseSessionOption {
   year_number: number;
 }
 
+export const DEFAULT_BASE_SESSIONS = [
+  "2026-2027",
+  "2025-2026",
+  "2024-2025",
+  "2023-2024",
+  "2022-2023",
+  "2021-2022",
+  "2020-2021",
+  "2019-2020",
+  "2018-2019",
+  "2017-2018",
+];
+
 export function getCourseSessionOptions(
   courseName: string,
-  dbIsTwoYear?: boolean
+  dbIsTwoYear?: boolean,
+  extraSessions?: string[]
 ): CourseSessionOption[] {
   const is2Year = isTwoYearCourse(courseName, dbIsTwoYear);
-  const baseSessions = [
-    "2026-2027",
-    "2025-2026",
-    "2024-2025",
-    "2023-2024",
-    "2022-2023",
-  ];
+  const combined = [...(extraSessions || []), ...DEFAULT_BASE_SESSIONS];
+  
+  // Deduplicate preserving trimmed strings
+  const uniqueSessions: string[] = [];
+  const seen = new Set<string>();
+  for (const s of combined) {
+    const trimmed = (s || "").trim();
+    if (trimmed && !seen.has(trimmed)) {
+      seen.add(trimmed);
+      uniqueSessions.push(trimmed);
+    }
+  }
+
+  // Sort sessions descending by start year
+  uniqueSessions.sort((a, b) => {
+    const startA = parseInt(a.split("-")[0], 10) || 0;
+    const startB = parseInt(b.split("-")[0], 10) || 0;
+    return startB - startA;
+  });
+
   const options: CourseSessionOption[] = [];
 
-  for (const session of baseSessions) {
-    const startYear = parseInt(session.split("-")[0], 10);
-    const endYear = parseInt(session.split("-")[1], 10);
+  for (const session of uniqueSessions) {
+    const parts = session.split("-");
+    const startYear = parseInt(parts[0], 10);
+    const endYear = parts.length > 1 ? parseInt(parts[1], 10) : startYear + 1;
 
     if (is2Year) {
       // 1st Year option
@@ -104,20 +132,24 @@ export function getCourseSessionOptions(
         key: `${session}_1`,
         label: `Batch ${session} — 1st Year (${session})`,
         session_label: `${session} (1st Year)`,
-        exam_year_label: String(endYear),
+        exam_year_label: !isNaN(endYear) ? String(endYear) : session,
         academic_session: session,
         year_number: 1,
       });
 
       // 2nd Year option (e.g. batch 2023-2024 → 2nd year is 2024-2025)
-      const secondYearStart = startYear + 1;
-      const secondYearEnd = endYear + 1;
-      const secondYearSession = `${secondYearStart}-${secondYearEnd}`;
+      const secondYearStart = !isNaN(startYear) ? startYear + 1 : startYear;
+      const secondYearEnd = !isNaN(endYear) ? endYear + 1 : endYear;
+      const secondYearSession =
+        !isNaN(startYear) && !isNaN(endYear)
+          ? `${secondYearStart}-${secondYearEnd}`
+          : `${session} (2nd Year)`;
+
       options.push({
         key: `${session}_2`,
         label: `Batch ${session} — 2nd Year (${secondYearSession})`,
         session_label: `${secondYearSession} (2nd Year)`,
-        exam_year_label: String(secondYearEnd),
+        exam_year_label: !isNaN(secondYearEnd) ? String(secondYearEnd) : String(secondYearSession),
         academic_session: session,
         year_number: 2,
       });
@@ -126,7 +158,7 @@ export function getCourseSessionOptions(
         key: `${session}_1`,
         label: `Session ${session} (1 Year)`,
         session_label: `${session} (1 Year)`,
-        exam_year_label: String(endYear),
+        exam_year_label: !isNaN(endYear) ? String(endYear) : session,
         academic_session: session,
         year_number: 1,
       });

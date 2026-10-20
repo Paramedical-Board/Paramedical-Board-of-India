@@ -209,10 +209,36 @@ export default function ExamManagementHubPage() {
     return isTwoYearCourse(selectedCourse, selectedCourseData?.is_two_year);
   }, [selectedCourse, selectedCourseData]);
 
-  // Dynamic Session Options based on course duration
+  // Custom Academic Sessions State
+  const [customSessions, setCustomSessions] = useState<string[]>([]);
+  const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
+  const [newSessionInput, setNewSessionInput] = useState("");
+  const [savingSession, setSavingSession] = useState(false);
+  const [sessionModalError, setSessionModalError] = useState<string | null>(null);
+  const [sessionSuccessToast, setSessionSuccessToast] = useState<string | null>(null);
+
+  // Fetch custom academic sessions on mount
+  useEffect(() => {
+    const fetchCustomSessions = async () => {
+      try {
+        const res = await fetch("/api/admin/academic-sessions");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.customSessions)) {
+            setCustomSessions(data.customSessions);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load custom sessions:", err);
+      }
+    };
+    fetchCustomSessions();
+  }, []);
+
+  // Dynamic Session Options based on course duration and custom sessions
   const sessionOptions = useMemo(() => {
-    return getCourseSessionOptions(selectedCourse, selectedCourseData?.is_two_year);
-  }, [selectedCourse, selectedCourseData]);
+    return getCourseSessionOptions(selectedCourse, selectedCourseData?.is_two_year, customSessions);
+  }, [selectedCourse, selectedCourseData, customSessions]);
 
   const activeSessionOption = useMemo<CourseSessionOption>(() => {
     const found = sessionOptions.find((o) => o.key === selectedSessionKey);
@@ -454,7 +480,7 @@ export default function ExamManagementHubPage() {
           c.code === newCourse ||
           (c.code && newCourse.includes(c.code))
       );
-    const newOpts = getCourseSessionOptions(newCourse, targetObj?.is_two_year);
+    const newOpts = getCourseSessionOptions(newCourse, targetObj?.is_two_year, customSessions);
     const defaultKey = newOpts[0]?.key || "";
     setSelectedSessionKey(defaultKey);
     setAllotResultMsg(null);
@@ -467,6 +493,62 @@ export default function ExamManagementHubPage() {
     setAllotResultMsg(null);
     setAllotError(null);
     setAllottedResults([]);
+  };
+
+  const handleAddSessionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSessionModalError(null);
+    const trimmed = newSessionInput.trim();
+    if (!trimmed) {
+      setSessionModalError("Please enter academic session batch (e.g. 2027-2028)");
+      return;
+    }
+    if (!/^\d{4}-\d{4}$/.test(trimmed)) {
+      setSessionModalError("Invalid format. Please enter as YYYY-YYYY (e.g. 2027-2028)");
+      return;
+    }
+
+    setSavingSession(true);
+    try {
+      const res = await fetch("/api/admin/academic-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionModalError(data.error || "Failed to add academic session");
+        setSavingSession(false);
+        return;
+      }
+
+      const updatedCustom: string[] = Array.isArray(data.customSessions)
+        ? data.customSessions
+        : [...customSessions, trimmed];
+
+      setCustomSessions(updatedCustom);
+
+      // Re-calculate options to auto-select the newly added session
+      const updatedOpts = getCourseSessionOptions(
+        selectedCourse,
+        selectedCourseData?.is_two_year,
+        updatedCustom
+      );
+      const newlyAddedKey = `${trimmed}_1`;
+      const match = updatedOpts.find((o) => o.key === newlyAddedKey);
+      if (match) {
+        setSelectedSessionKey(match.key);
+      }
+
+      setSessionSuccessToast(`Academic Session "${trimmed}" successfully added!`);
+      setTimeout(() => setSessionSuccessToast(null), 4000);
+      setIsAddSessionOpen(false);
+      setNewSessionInput("");
+    } catch (err: any) {
+      setSessionModalError(err?.message || "An unexpected error occurred");
+    } finally {
+      setSavingSession(false);
+    }
   };
 
   // Individual helper fetchers for targeted updates
@@ -993,13 +1075,30 @@ export default function ExamManagementHubPage() {
 
           {/* 2. Academic Session Selector (Dynamic based on course duration) */}
           <div className="lg:col-span-6">
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Select Academic Session / सत्र चुनें:
               </label>
-              <span className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
-                Exam Year: <strong className="text-[#143E66]">{activeSessionOption.exam_year_label}</strong>
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                  Exam Year: <strong className="text-[#143E66]">{activeSessionOption.exam_year_label}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSessionModalError(null);
+                    setNewSessionInput("");
+                    setIsAddSessionOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#143E66] hover:bg-[#00031D] text-white text-[11px] font-bold rounded shadow-xs transition cursor-pointer active:scale-95"
+                  title="Add new academic session / नया सत्र जोड़ें"
+                >
+                  <svg className="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>+ Add Session</span>
+                </button>
+              </div>
             </div>
             <select
               value={selectedSessionKey || sessionOptions[0]?.key}
@@ -1013,6 +1112,24 @@ export default function ExamManagementHubPage() {
               ))}
             </select>
           </div>
+
+          {sessionSuccessToast && (
+            <div className="lg:col-span-12 p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded text-xs font-bold flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>{sessionSuccessToast}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSessionSuccessToast(null)}
+                className="text-emerald-700 hover:text-emerald-900 font-bold px-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* Quick Course & Session Status Badges */}
           <div className="lg:col-span-12 flex items-center gap-2 flex-wrap pt-2 border-t border-slate-200/80">
@@ -2213,6 +2330,144 @@ export default function ExamManagementHubPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: ADD ACADEMIC SESSION                                              */}
+      {/* ========================================================================= */}
+      {isAddSessionOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setIsAddSessionOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl max-w-lg w-full p-6 relative shadow-2xl border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-[#00031D] flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#143E66]"></span>
+                  Add Academic Session / नया सत्र जोड़ें
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Enter year batch label. Course duration options & exam years will be calculated automatically.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddSessionOpen(false)}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {sessionModalError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded text-xs font-semibold flex items-center gap-2">
+                <svg className="w-4 h-4 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{sessionModalError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAddSessionSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Academic Session Batch / शैक्षणिक सत्र <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 2027-2028"
+                  value={newSessionInput}
+                  onChange={(e) => {
+                    setSessionModalError(null);
+                    setNewSessionInput(e.target.value);
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-bold text-[#143E66] focus:bg-white focus:ring-2 focus:ring-[#143E66] focus:outline-hidden"
+                  autoFocus
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[11px] text-slate-500 font-medium">Quick suggestions:</span>
+                  {["2027-2028", "2028-2029", "2016-2017"].map((sugg) => (
+                    <button
+                      key={sugg}
+                      type="button"
+                      onClick={() => setNewSessionInput(sugg)}
+                      className="text-[11px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold transition cursor-pointer"
+                    >
+                      {sugg}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Automatic Calculation Preview */}
+              {(() => {
+                const parts = newSessionInput.trim().split("-");
+                const start = parseInt(parts[0], 10);
+                const end = parts.length > 1 ? parseInt(parts[1], 10) : start + 1;
+                const isValid = /^\d{4}-\d{4}$/.test(newSessionInput.trim());
+
+                return (
+                  <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-lg space-y-2">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Automatic Course Duration Mapping Preview:
+                    </div>
+                    {isValid ? (
+                      <div className="text-xs space-y-1.5 text-slate-700">
+                        <div className="flex items-start gap-1.5">
+                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 font-bold rounded text-[10px] shrink-0">1-Year Course</span>
+                          <span>Session <strong>{newSessionInput.trim()} (1 Year)</strong> • Exam Year: <strong>{end}</strong></span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded text-[10px] shrink-0">2-Year Course</span>
+                          <div className="space-y-0.5">
+                            <div>1st Year: <strong>Batch {newSessionInput.trim()} — 1st Year ({newSessionInput.trim()})</strong> • Exam Year: <strong>{end}</strong></div>
+                            <div>2nd Year: <strong>Batch {newSessionInput.trim()} — 2nd Year ({start + 1}-{end + 1})</strong> • Exam Year: <strong>{end + 1}</strong></div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-500 italic">
+                        Enter a batch session above (e.g. 2027-2028) to see automatic duration & exam year calculation preview.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsAddSessionOpen(false)}
+                  disabled={savingSession}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer"
+                >
+                  Cancel / रद्द करें
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingSession || !newSessionInput.trim()}
+                  className="px-5 py-2 bg-[#143E66] hover:bg-[#0c2a47] disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow-sm transition inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  {savingSession && (
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  <span>Add Session / सत्र जोड़ें</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
