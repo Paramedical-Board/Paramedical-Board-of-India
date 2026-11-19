@@ -118,6 +118,8 @@ export default function Footer() {
                 { name: "Announcements", href: "/announcements" },
                 { name: "Admit Card", href: "/admit-card" },
                 { name: "Examination Results", href: "/result" },
+                { name: "Registration Certificate", href: "/registration-certificate" },
+                { name: "NOC Certificate", href: "/noc" },
                 { name: "About Board", href: "/about-us" },
               ].map((link) => (
                 <Link

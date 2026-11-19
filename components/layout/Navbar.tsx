@@ -56,6 +56,8 @@ export default function Navbar() {
         { name: "I-Card Download", isPlaceholder: true, badge: "Coming Soon" },
         { name: "Admit Card", href: "/admit-card" },
         { name: "Result / परिणाम", href: "/result" },
+        { name: "Registration Certificate", href: "/registration-certificate" },
+        { name: "NOC / अनापत्ति प्रमाण-पत्र", href: "/noc" },
       ],
     },
     {

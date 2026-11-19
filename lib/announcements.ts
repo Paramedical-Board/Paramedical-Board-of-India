@@ -16,7 +16,7 @@ export async function getLatestAnnouncements(limit = 4): Promise<Announcement[]>
     .limit(limit);
 
   if (error) {
-    console.error('getLatestAnnouncements error:', error);
+    console.error('getLatestAnnouncements error:', error.message);
     return [];
   }
   return (data ?? []) as Announcement[];
@@ -40,7 +40,7 @@ export async function getAnnouncementsPage(
     .range(from, to);
 
   if (error) {
-    console.error('getAnnouncementsPage error:', error);
+    console.error('getAnnouncementsPage error:', error.message);
     return { announcements: [], total: 0, page: safePage, pageSize: safeSize, totalPages: 1 };
   }
 
@@ -65,7 +65,7 @@ export async function getAnnouncementById(id: string): Promise<Announcement | nu
     .maybeSingle();
 
   if (error) {
-    console.error('getAnnouncementById error:', error);
+    console.error('getAnnouncementById error:', error.message);
     return null;
   }
   return (data as Announcement | null) ?? null;
