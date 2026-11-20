@@ -4,6 +4,7 @@ import React, { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import StatusBadge from "@/components/common/StatusBadge";
+import CertificateIssueCard from "@/components/admin/CertificateIssueCard";
 
 interface QueryItem {
   id: string;
@@ -47,6 +48,8 @@ interface RegistrationData {
   status: string;
   created_at: string;
   college_id: string;
+  reg_cert_suffix?: string | null;
+  reg_cert_issued_at?: string | null;
   colleges?: {
     college_name: string;
   } | null;
@@ -357,6 +360,17 @@ export default function AdminApplicationDetailPage({
           {actionError}
         </div>
       )}
+
+      {/* Registration Certificate & NOC — admin decides which students can download them */}
+      <CertificateIssueCard
+        registrationId={registration.id}
+        status={registration.status}
+        suffix={registration.reg_cert_suffix ?? null}
+        issuedAt={registration.reg_cert_issued_at ?? null}
+        onChanged={(suffix, issuedAt) =>
+          setRegistration((r) => (r ? { ...r, reg_cert_suffix: suffix, reg_cert_issued_at: issuedAt } : r))
+        }
+      />
 
       {/* Layout Grid: 2 Columns on Desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

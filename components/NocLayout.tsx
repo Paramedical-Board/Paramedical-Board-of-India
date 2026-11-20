@@ -160,7 +160,7 @@ export default function NocLayout({ noc: n, className = "" }: Props) {
           </p>
           <p>
             Applicant is registered in Indian Paramedical Board of India bearing registration No.{" "}
-            <Fill>{n.enrollment_no}</Fill> Dated <Fill>{formatDisplayDate(n.registration_date)}</Fill> to obtain
+            <Fill>{n.registration_no}</Fill> Dated <Fill>{formatDisplayDate(n.registration_date)}</Fill> to obtain
             registration from any other Council/Board or State.
           </p>
         </div>

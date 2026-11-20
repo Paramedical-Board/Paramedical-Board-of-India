@@ -171,7 +171,7 @@ export default function PublicNocPage() {
               </form>
 
               <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 text-center text-xs text-slate-500">
-                NOC is issued only to candidates who have passed the final examination and whose result is published.
+                NOC is available only after the Board has issued your registration number. Facing issues? Contact your affiliated college.
               </div>
             </div>
 
