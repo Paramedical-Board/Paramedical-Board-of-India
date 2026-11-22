@@ -90,7 +90,7 @@ export default function NavDropdown({ name, items, active = false }: NavDropdown
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 mt-0.5 w-60 origin-top-left bg-white rounded-b-md shadow-xl border-t-2 border-[#D4AF37] border-x border-b border-slate-200/80 py-1 z-50 animate-fadeIn divide-y divide-slate-100">
+        <div className="absolute left-0 mt-0.5 w-72 sm:w-80 origin-top-left bg-white rounded-b-md shadow-xl border-t-2 border-[#D4AF37] border-x border-b border-slate-200/80 py-1 z-50 animate-fadeIn divide-y divide-slate-100">
           <div className="py-1">
             {items.map((item) => {
               if (item.isPlaceholder || !item.href) {
@@ -118,22 +118,22 @@ export default function NavDropdown({ name, items, active = false }: NavDropdown
                   download={item.download}
                   target={item.target}
                   onClick={() => setIsOpen(false)}
-                  className={`px-4 py-2.5 text-xs sm:text-[13px] flex items-center justify-between transition-colors group ${
+                  className={`px-4 py-2.5 text-xs sm:text-[13px] flex items-center justify-between gap-2 transition-colors group ${
                     isItemActive
                       ? "bg-[#EBF4FA] text-[#143E66] font-bold border-l-3 border-[#D4AF37]"
                       : "font-semibold text-slate-700 hover:text-[#143E66] hover:bg-[#EBF4FA]"
                   }`}
                 >
-                  <span className="group-hover:translate-x-0.5 transition-transform flex items-center gap-2">
+                  <span className="group-hover:translate-x-0.5 transition-transform flex items-center gap-2 min-w-0 flex-1">
                     {item.name}
                   </span>
                   {item.badge ? (
-                    <span className="text-[10px] font-bold bg-[#B13B1C] text-white px-1.5 py-0.5 rounded shadow-2xs">
+                    <span className="shrink-0 text-[10px] font-bold bg-[#B13B1C] text-white px-1.5 py-0.5 rounded shadow-2xs">
                       {item.badge}
                     </span>
                   ) : item.download ? (
                     <svg
-                      className="w-4 h-4 text-[#143E66]/70 group-hover:text-[#143E66] transition-colors"
+                      className="shrink-0 w-4 h-4 text-[#143E66]/70 group-hover:text-[#143E66] transition-colors"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -142,7 +142,7 @@ export default function NavDropdown({ name, items, active = false }: NavDropdown
                     </svg>
                   ) : (
                     <svg
-                      className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#143E66] transition-colors"
+                      className="shrink-0 w-3.5 h-3.5 text-slate-400 group-hover:text-[#143E66] transition-colors"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"

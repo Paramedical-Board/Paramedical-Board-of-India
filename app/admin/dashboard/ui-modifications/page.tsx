@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Announcement } from "@/lib/announcement-types";
 import { splitDate } from "@/lib/announcement-format";
 
@@ -560,8 +561,8 @@ function InstitutionFormFields({ form, onChange }: InstitutionFormFieldsProps) {
       {/* Contact Person */}
       <div>
         <label className={labelCls}>
-          Contact Person{" "}
-          <span className="text-slate-400 font-normal">(Optional)</span>
+          Contact Person / Director / Principal{" "}
+          <span className="text-slate-400 font-normal">(Optional · printed on Affiliation Certificate)</span>
         </label>
         <input
           type="text"
@@ -1683,21 +1684,31 @@ export default function UIModificationsPage() {
                     </div>
 
                     {/* Action buttons */}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="grid grid-cols-3 gap-2 pt-1">
                       <button
                         type="button"
                         onClick={() => handleOpenEditModal(inst)}
-                        className="py-2 px-3 bg-slate-100 hover:bg-[#143E66] active:bg-[#0f2e4d] hover:text-white text-[#143E66] border border-slate-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                        className="py-2 px-2 bg-slate-100 hover:bg-[#143E66] active:bg-[#0f2e4d] hover:text-white text-[#143E66] border border-slate-300 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         Edit
                       </button>
+                      <Link
+                        href={`/admin/dashboard/affiliated-institutions/${inst.id}/certificate`}
+                        target="_blank"
+                        className="py-2 px-2 bg-[#143E66]/10 hover:bg-[#143E66] active:bg-[#0f2e4d] hover:text-white text-[#143E66] border border-[#143E66]/30 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Certificate
+                      </Link>
                       <button
                         type="button"
                         onClick={() => handleDelete(inst)}
-                        className="py-2 px-3 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-700 border border-red-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                        className="py-2 px-2 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-700 border border-red-200 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1802,6 +1813,19 @@ export default function UIModificationsPage() {
                               </svg>
                               Edit
                             </button>
+
+                            {/* Certificate */}
+                            <Link
+                              href={`/admin/dashboard/affiliated-institutions/${inst.id}/certificate`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#143E66]/10 hover:bg-[#143E66] hover:text-white text-[#143E66] border border-[#143E66]/30 rounded text-xs font-bold transition cursor-pointer"
+                              title="Print affiliation certificate"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                              Certificate
+                            </Link>
 
                             {/* Delete */}
                             <button

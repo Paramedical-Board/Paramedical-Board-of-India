@@ -68,6 +68,11 @@ export default function Navbar() {
           href: "/forms/paramedical-enrollment-form.pdf",
           download: "Paramedical_Enrollment_Form.pdf",
         },
+        {
+          name: "College Affiliation Application Form",
+          href: "/forms/affiliation-application-form.pdf",
+          download: "Affiliation_Application_Form.pdf",
+        },
       ],
     },
     { name: "Announcements", href: "/announcements" },

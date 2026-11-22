@@ -55,15 +55,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Roll number / exam session / datesheet completeness is validated inside getAdmitCardData(),
+  // which also marks admit_card_generated_at on first successful render. We must NOT require
+  // that flag to already be set here — that would mean no student could ever view their admit
+  // card for the first time without an admin first opening it in the admin panel.
   if (yrNum === 2) {
-    if (!reg.exam_session_id_2nd_year || !reg.roll_no_2nd_year || !reg.admit_card_2nd_year_generated_at) {
+    if (!reg.exam_session_id_2nd_year || !reg.roll_no_2nd_year) {
       return NextResponse.json(
         { error: "Admit card for 2nd Year is not available yet. Please contact your college or examination center." },
         { status: 400 }
       );
     }
   } else {
-    if (!reg.exam_session_id || !reg.roll_no || !reg.admit_card_generated_at) {
+    if (!reg.exam_session_id || !reg.roll_no) {
       return NextResponse.json(
         { error: "Admit card for 1st Year is not available yet. Please contact your college or examination center." },
         { status: 400 }
