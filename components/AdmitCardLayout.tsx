@@ -16,12 +16,23 @@ function formatDisplayDate(dateStr?: string | null): string {
 interface AdmitCardLayoutProps {
   admitCard: AdmitCardData;
   className?: string;
+  /**
+   * Fixed A4 sheet mode: always use the two-column desktop layout, whatever the screen width.
+   * Use it when the card is wrapped in <A4Fit>, which scales the whole sheet down on phones
+   * (instead of the cramped single-column reflow).
+   */
+  sheet?: boolean;
 }
 
 export default function AdmitCardLayout({
   admitCard,
   className = "",
+  sheet = false,
 }: AdmitCardLayoutProps) {
+  const detailsGridCls = sheet ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2";
+  const fullRowCls = sheet ? "col-span-2" : "sm:col-span-2";
+  const spacerCls = sheet ? "" : "hidden sm:block";
+
   // Format center info
   const centerDisplay = [
     admitCard.center_name,
@@ -139,7 +150,7 @@ export default function AdmitCardLayout({
 
         {/* Spacer to keep Title perfectly centered */}
         <div
-          className="shrink-0 hidden sm:block"
+          className={`shrink-0 ${spacerCls}`}
           style={{ width: "74px", minWidth: "74px" }}
         ></div>
       </div>
@@ -160,7 +171,7 @@ export default function AdmitCardLayout({
 
         <div className="flex items-start justify-between gap-4">
           {/* Details Grid */}
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] sm:text-[11.5px] leading-snug">
+          <div className={`flex-1 grid ${detailsGridCls} gap-x-4 gap-y-1.5 text-[11px] sm:text-[11.5px] leading-snug`}>
             {/* Candidate Name */}
             <div className="flex items-baseline">
               <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Candidate Name</span>
@@ -204,14 +215,14 @@ export default function AdmitCardLayout({
             </div>
 
             {/* Course Name (Full width) */}
-            <div className="flex items-baseline sm:col-span-2">
+            <div className={`flex items-baseline ${fullRowCls}`}>
               <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Course Name</span>
               <span className="text-slate-600 font-semibold mr-1.5">:</span>
               <span className="text-[#0b2545] font-bold uppercase">{admitCard.course}</span>
             </div>
 
             {/* Exam Centre (Full width) */}
-            <div className="flex items-baseline sm:col-span-2">
+            <div className={`flex items-baseline ${fullRowCls}`}>
               <span className="text-slate-600 font-medium min-w-[110px] shrink-0">Exam Centre</span>
               <span className="text-slate-600 font-semibold mr-1.5">:</span>
               <span className="text-[#0b2545] font-bold uppercase">{centerDisplay || "—"}</span>

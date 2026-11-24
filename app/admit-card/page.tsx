@@ -6,6 +6,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AdmitCardLayout from "@/components/AdmitCardLayout";
 import PrintButton from "@/components/PrintButton";
+import A4Fit from "@/components/common/A4Fit";
 import DobSelectPicker from "@/components/common/DobSelectPicker";
 import { AdmitCardData } from "@/lib/admit-card-data";
 
@@ -83,21 +84,16 @@ export default function PublicAdmitCardLookupPage() {
       </div>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 print:p-0 print:m-0 print:bg-white print:justify-start print:pt-0">
+      <main className={`flex-1 flex flex-col justify-center py-6 sm:py-12 ${admitCard ? "px-2" : "px-4"} sm:px-6 lg:px-8 print:p-0 print:m-0 print:bg-white print:justify-start print:pt-0`}>
         {admitCard ? (
           /* Success View: Admit Card Rendered */
           <div className="w-full max-w-[794px] mx-auto relative">
-            {/* Floating Print Button for student */}
-            <div className="fixed top-20 right-6 z-50 no-print print:hidden">
-              <PrintButton label="Print / Download PDF" />
-            </div>
-
             {/* Top Bar with Reset / Search Again */}
-            <div className="mb-4 flex items-center justify-between no-print print:hidden">
+            <div className="mb-3 sm:mb-4 flex items-center justify-between gap-3 no-print print:hidden">
               <button
                 type="button"
                 onClick={handleSearchAgain}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-100 text-[#143E66] border border-slate-300 rounded-md text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                className="shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 bg-white hover:bg-slate-100 text-[#143E66] border border-slate-300 rounded-md text-xs font-bold shadow-2xs transition-colors cursor-pointer"
               >
                 <svg
                   className="w-4 h-4"
@@ -112,16 +108,31 @@ export default function PublicAdmitCardLookupPage() {
                     d="M10 19l-7-7m0 0l7-7m-7 7h18"
                   />
                 </svg>
-                <span>Search Another Admit Card</span>
+                <span>
+                  Search Another<span className="hidden sm:inline"> Admit Card</span>
+                </span>
               </button>
 
-              <span className="text-xs text-slate-500 font-medium">
-                Candidate: <strong className="text-slate-800 uppercase">{admitCard.candidate_name}</strong>
+              <span className="min-w-0 truncate text-xs text-slate-500 font-medium">
+                <span className="hidden sm:inline">Candidate: </span>
+                <strong className="text-slate-800 uppercase">{admitCard.candidate_name}</strong>
               </span>
             </div>
 
+            {/* Print / Download button: full-width under the top bar on phones, right-aligned above
+                the card on larger screens. In normal flow (no longer floating), so it can't cover the
+                Board title on phones or the sticky navbar on desktop. */}
+            <div className="mb-3 flex flex-col gap-1.5 sm:items-end no-print print:hidden">
+              <PrintButton label="Print / Download PDF" className="w-full justify-center sm:w-auto" />
+              <p className="sm:hidden text-center text-[10px] leading-snug text-slate-500">
+                Button not working (e.g. inside WhatsApp or Instagram)? Open this page in Chrome or Safari.
+              </p>
+            </div>
+
             {/* The Rendered Admit Card */}
-            <AdmitCardLayout admitCard={admitCard} />
+            <A4Fit>
+              <AdmitCardLayout admitCard={admitCard} sheet />
+            </A4Fit>
 
             {/* Bottom Reset Button for mobile */}
             <div className="mt-6 text-center no-print print:hidden">
