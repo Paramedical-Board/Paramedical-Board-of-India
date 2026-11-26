@@ -52,7 +52,7 @@ function Row({
 }
 
 export default function RegistrationCertificateLayout({ certificate: c, className = "" }: Props) {
-  const place = "India";
+  const place = "Mumbai";
   const issued = formatDisplayDate(c.registration_date);
 
   return (

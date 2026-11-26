@@ -168,10 +168,8 @@ export default function NocLayout({ noc: n, className = "" }: Props) {
         {/* Place / date / signature */}
         <div className="noc-signrow relative z-10 mt-24 flex items-end justify-between break-inside-avoid" style={SERIF}>
           <div className="text-[15px] leading-relaxed">
-            <div>Mumbai:</div>
-            <div>
-              Date : <span className="font-sans font-bold text-[#0b2545] text-[14px]">{formatDisplayDate(n.issue_date)}</span>
-            </div>
+            <div>Place : Mumbai</div>
+            <div>Date : {formatDisplayDate(n.issue_date)}</div>
           </div>
 
           {/* Secretary signature — same as the result sheet */}
